@@ -3,12 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, ArrowRight, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useLanguage } from '../context/LanguageContext';
-
+200
 const doctorsData = [
   { id: 1, name: 'Dr. Anita Mahey', city: 'Chandigarh', specialization: 'Gynecologist', rating: 4.9, available: true, image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200&h=200' },
   { id: 2, name: 'Dr. Heena Chawla', city: 'Chandigarh', specialization: 'Gynecologist', rating: 4.8, available: true, image: 'https://images.unsplash.com/photo-1594824436998-d50d0bc75440?auto=format&fit=crop&q=80&w=200&h=200' },
   { id: 3, name: 'Dr. Sweta Shah', city: 'Mumbai', specialization: 'Gynecologist', rating: 4.7, available: false, image: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=200&h=200' },
   { id: 4, name: 'Dr. Manjiri', city: 'Mumbai', specialization: 'Gynecologist', rating: 4.8, available: true, image: 'https://images.unsplash.com/photo-1527613426496-c67d6c6e7ed6?auto=format&fit=crop&q=80&w=200&h=200' },
+  { id: 4, name: 'Dr. Shweta Mendiratta', city: 'Mumbai', specialization: 'Gynecologist', rating: 4.7, available: true, image: 'https://www.yatharthhospitals.com/uploads/doctor/dr-shweta-mendiratta11515556.jpeg' },
+  { id: 4, name: 'Dr. Veena Keerthi', city: 'Mumbai', specialization: 'Gynecologist', rating: 4.6, available: true, image: 'https://kangaroocareindia.com/static/media/dr-veena-keerthi-new.cf46915542f71ba9bb1c.jpeg' },
 ];
 
 const FILTERS = ['All', 'Chandigarh', 'Mumbai'];
