@@ -7,17 +7,29 @@ const router = express.Router();
 // Log period date
 router.post('/log', authMiddleware, async (req, res) => {
   try {
-    const { startDate, duration, symptoms, mood, flowLevel, notes } = req.body;
+    const { startDate, duration, endDate, symptoms, mood, flowLevel, notes } = req.body;
 
-    // 🔥 Calculate endDate automatically
-    let endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + (duration - 1));
+    let calculatedEndDate;
+    if (duration) {
+  // If duration is provided → calculate endDate
+  calculatedEndDate = new Date(startDate);
+  calculatedEndDate.setDate(calculatedEndDate.getDate() + (duration - 1));
+
+} else if (endDate) {
+  // If frontend sends endDate → use it
+  calculatedEndDate = new Date(endDate);
+
+} else {
+  // ✅ DEFAULT FIX (no more error)
+  calculatedEndDate = new Date(startDate);
+  calculatedEndDate.setDate(calculatedEndDate.getDate() + 4); // default 5 days
+}
 
     const newLog = new CycleData({
       userId: req.user.id,
       startDate,
-      endDate,
-      symptoms,
+      endDate: calculatedEndDate,
+      symptoms: symptoms || [],
       mood,
       flowLevel,
       notes,
@@ -27,7 +39,7 @@ router.post('/log', authMiddleware, async (req, res) => {
     res.json(cycle);
 
   } catch (err) {
-    console.error(err.message);
+    console.error("LOG ERROR:", err); // 👈 important for debugging
     res.status(500).send('Server Error');
   }
 });
@@ -204,19 +216,20 @@ router.get('/pcod-risk', authMiddleware, async (req, res) => {
 // Delete a cycle log
 router.delete('/delete/:id', authMiddleware, async (req, res) => {
   try {
-    const cycleId = req.params.id;
+    const deleted = await CycleData.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user.id, // 🔥 IMPORTANT SECURITY FIX
+    });
 
-    // Find the cycle to ensure it belongs to the logged-in user
-    const cycle = await CycleData.findOne({ _id: cycleId, userId: req.user.id });
-    if (!cycle) {
-      return res.status(404).json({ message: 'Cycle log not found' });
+    if (!deleted) {
+      return res.status(404).json({ message: 'Log not found or not yours' });
     }
 
-    await cycle.remove();
+    res.json({ message: 'Log deleted successfully' });
 
-    res.json({ message: 'Cycle log deleted successfully' });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error("DELETE ERROR FULL:", err); // 👈 THIS WILL SHOW REAL ERROR
+    res.status(500).json({ message: 'Server error while deleting' });
   }
 });
+export default router;
