@@ -32,7 +32,7 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-// Database connection
+// Database connectionnode ser
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => {
