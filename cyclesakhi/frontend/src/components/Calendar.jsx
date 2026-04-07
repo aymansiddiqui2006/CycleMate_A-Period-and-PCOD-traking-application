@@ -13,6 +13,11 @@ const Calendar = memo(() => {
 
   // All data comes from shared CycleContext
   const { history, prediction, refreshData } = useCycle();
+  const selectedLog = selectedDate
+  ? history.find(item => {
+      return new Date(item.startDate).toDateString() === new Date(selectedDate).toDateString();
+    })
+  : null;
 
   // Derive display sets from context data
   const periodDates = new Set(
@@ -100,7 +105,8 @@ const Calendar = memo(() => {
       <AnimatePresence>
         {showModal && selectedDate && (
           <PeriodLogModal
-            date={selectedDate}
+             date={selectedDate}
+             logId={selectedLog?._id}
             onClose={() => setShowModal(false)}
             onLogged={() => {
               // refreshData() triggers context update → Dashboard re-renders automatically
