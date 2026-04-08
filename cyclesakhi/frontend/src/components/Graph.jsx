@@ -7,55 +7,91 @@ import {
   ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 
-/* ── Custom Tooltip ─────────────────────────────── */
+/* ── Custom Tooltip ──────────────────────────────────────────────────────── */
 const CustomTooltip = ({ active, payload, label }) => {
-  if (active && payload?.length) {
-    return (
-      <div className="bg-white px-4 py-3 rounded-2xl shadow-lg border border-pink-100">
-        <p className="text-xs text-gray-400 mb-1">{label}</p>
-        <p className="text-xl font-black text-[#FF6B8A]">
-          {payload[0].value} <span className="text-sm font-medium text-gray-400">days</span>
-        </p>
-      </div>
-    );
-  }
-  return null;
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-white px-4 py-3 rounded-2xl shadow-xl border border-pink-100">
+      <p className="text-[11px] text-gray-400 mb-1 font-medium uppercase tracking-wider">{label}</p>
+      <p className="text-2xl font-black text-[#FF6B8A] leading-none">
+        {payload[0].value}
+        <span className="text-sm font-medium text-gray-400 ml-1">days</span>
+      </p>
+    </div>
+  );
 };
 
 const axisProps = {
-  tick: { fill: '#9ca3af', fontSize: 12 },
+  tick: { fill: '#d1d5db', fontSize: 11, fontWeight: 600 },
   axisLine: false,
   tickLine: false,
 };
 
-/* ── Graph ──────────────────────────────────────── */
+const CHART_TYPES = [
+  { key: 'bar',  label: '▊ Bar' },
+  { key: 'line', label: '∿ Line' },
+  { key: 'area', label: '◈ Area' },
+];
+
+/* ── Graph ───────────────────────────────────────────────────────────────── */
 const Graph = memo(({ data }) => {
   const [chartType, setChartType] = useState('bar');
 
   if (!data || data.length < 2) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400">
-        <div className="text-4xl">📊</div>
-        <p className="text-sm">Log at least 2 cycles to see trends</p>
+      <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400 py-10">
+        <div className="w-16 h-16 rounded-full bg-pink-50 flex items-center justify-center text-3xl">
+          📊
+        </div>
+        <p className="text-sm font-medium text-gray-400">Log at least 2 cycles to see trends</p>
       </div>
     );
   }
 
-  // Build chart data from history
-  const chartData = [];
-  for (let i = data.length - 1; i > 0; i--) {
-    const curr = new Date(data[i - 1].startDate);
-    const prev = new Date(data[i].startDate);
-    const days = Math.ceil(Math.abs(curr - prev) / (1000 * 60 * 60 * 24));
-    chartData.push({
-      name: prev.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      days,
+  // ─── Aggregate by month ──────────────────────────────────────────────────────
+  // FIX: use periodDates array length when available for accuracy;
+  //      fall back to endDate diff only if needed
+  // ─── Aggregate by month accurately ─────────────────────────────────────────
+const chartData = Object.values(
+  data.reduce((acc, item) => {
+    // Expand periodDates into YYYY-MM-DD array
+    let dates;
+    if (item.periodDates?.length) {
+      dates = item.periodDates.map(d => new Date(d));
+    } else if (item.startDate && item.endDate) {
+      const start = new Date(item.startDate);
+      const end = new Date(item.endDate);
+      const length = Math.ceil((end - start + 1) / 86_400_000);
+      dates = Array.from({ length }, (_, i) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
+    } else if (item.startDate) {
+      dates = [new Date(item.startDate)];
+    } else {
+      dates = [];
+    }
+
+    // Count each date in its month
+    dates.forEach(d => {
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!acc[monthKey]) acc[monthKey] = { month: monthKey, total: 0, count: 0 };
+      acc[monthKey].total += 1;   // each date counts as 1 day
+      acc[monthKey].count += 1;   // can be used if you want average per log
     });
-  }
+
+    return acc;
+  }, {})
+)
+  .sort((a, b) => a.month.localeCompare(b.month))
+  .map(({ month, total, count }) => {
+    const d = new Date(month + '-01');
+    return {
+      name: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+      days: total, // total days per month
+    };
+  });
 
   const sharedProps = {
     data: chartData,
-    margin: { top: 10, right: 10, left: -10, bottom: 5 },
+    margin: { top: 10, right: 16, left: -20, bottom: 0 },
   };
 
   const referenceLines = (
@@ -63,34 +99,42 @@ const Graph = memo(({ data }) => {
       <ReferenceLine
         y={28}
         stroke="#a855f7"
-        strokeDasharray="4 4"
-        label={{ value: 'Normal', position: 'insideTopRight', fill: '#a855f7', fontSize: 11, fontWeight: 600 }}
+        strokeDasharray="4 3"
+        strokeWidth={1.5}
+        label={{ value: '28d avg', position: 'insideTopRight', fill: '#a855f7', fontSize: 10, fontWeight: 700 }}
       />
       <ReferenceLine
         y={35}
-        stroke="#ef4444"
-        strokeDasharray="4 4"
-        label={{ value: 'Risk Zone', position: 'insideTopRight', fill: '#ef4444', fontSize: 11, fontWeight: 600 }}
+        stroke="#f87171"
+        strokeDasharray="4 3"
+        strokeWidth={1.5}
+        label={{ value: 'Risk >35d', position: 'insideTopRight', fill: '#f87171', fontSize: 10, fontWeight: 700 }}
       />
+    </>
+  );
+
+  const commonAxisElements = (
+    <>
+      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+      <XAxis dataKey="name" {...axisProps} />
+      <YAxis {...axisProps} domain={[0, 'dataMax + 6']} />
+      <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,107,138,0.05)' }} />
+      {referenceLines}
     </>
   );
 
   return (
     <div className="w-full h-full flex flex-col">
-      {/* Toggle buttons */}
+      {/* Toggle */}
       <div className="flex justify-end gap-1.5 mb-4 flex-shrink-0">
-        {[
-          { key: 'bar',  label: 'Bar' },
-          { key: 'line', label: 'Line' },
-          { key: 'area', label: 'Area' },
-        ].map(t => (
+        {CHART_TYPES.map(t => (
           <button
             key={t.key}
             onClick={() => setChartType(t.key)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`px-3 py-1.5 rounded-xl text-[11px] font-bold tracking-wide transition-all ${
               chartType === t.key
-                ? 'bg-[#FF6B8A] text-white shadow-sm'
-                : 'bg-gray-100 text-gray-500 hover:bg-pink-50 hover:text-[#FF6B8A]'
+                ? 'bg-[#FF6B8A] text-white shadow-sm shadow-pink-200'
+                : 'bg-gray-50 text-gray-400 hover:bg-pink-50 hover:text-[#FF6B8A]'
             }`}
           >
             {t.label}
@@ -105,57 +149,52 @@ const Graph = memo(({ data }) => {
               <defs>
                 <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%"   stopColor="#FF6B8A" stopOpacity={1} />
-                  <stop offset="100%" stopColor="#ff477e" stopOpacity={0.8} />
+                  <stop offset="100%" stopColor="#ff477e" stopOpacity={0.75} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-              <XAxis dataKey="name" {...axisProps} />
-              <YAxis {...axisProps} domain={[0, 'dataMax + 5']} />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,107,138,0.05)' }} />
-              {referenceLines}
-              <Bar dataKey="days" fill="url(#barGrad)" radius={[8, 8, 0, 0]} barSize={38} animationBegin={0} animationDuration={1500} />
+              {commonAxisElements}
+              <Bar
+                dataKey="days"
+                fill="url(#barGrad)"
+                radius={[8, 8, 0, 0]}
+                barSize={32}
+                animationBegin={0}
+                animationDuration={1200}
+              />
             </BarChart>
           ) : chartType === 'line' ? (
             <LineChart {...sharedProps}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-              <XAxis dataKey="name" {...axisProps} />
-              <YAxis {...axisProps} domain={[0, 'dataMax + 5']} />
-              <Tooltip content={<CustomTooltip />} />
-              {referenceLines}
+              {commonAxisElements}
               <Line
                 type="monotone"
                 dataKey="days"
                 stroke="#FF6B8A"
-                strokeWidth={3}
-                dot={{ r: 5, fill: '#FF6B8A', stroke: '#fff', strokeWidth: 2 }}
-                activeDot={{ r: 8, fill: '#FF6B8A', stroke: '#fff', strokeWidth: 2 }}
+                strokeWidth={2.5}
+                dot={{ r: 4, fill: '#FF6B8A', stroke: '#fff', strokeWidth: 2 }}
+                activeDot={{ r: 7, fill: '#FF6B8A', stroke: '#fff', strokeWidth: 2 }}
                 animationBegin={0}
-                animationDuration={1500}
+                animationDuration={1200}
               />
             </LineChart>
           ) : (
             <AreaChart {...sharedProps}>
               <defs>
-                <linearGradient id="pinkGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#FF6B8A" stopOpacity={0.3} />
+                <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#FF6B8A" stopOpacity={0.25} />
                   <stop offset="95%" stopColor="#FF6B8A" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-              <XAxis dataKey="name" {...axisProps} />
-              <YAxis {...axisProps} domain={[0, 'dataMax + 5']} />
-              <Tooltip content={<CustomTooltip />} />
-              {referenceLines}
+              {commonAxisElements}
               <Area
                 type="monotone"
                 dataKey="days"
                 stroke="#FF6B8A"
-                strokeWidth={3}
-                fill="url(#pinkGradient)"
-                dot={{ r: 5, fill: '#FF6B8A', stroke: '#fff', strokeWidth: 2 }}
-                activeDot={{ r: 8 }}
+                strokeWidth={2.5}
+                fill="url(#areaGrad)"
+                dot={{ r: 4, fill: '#FF6B8A', stroke: '#fff', strokeWidth: 2 }}
+                activeDot={{ r: 7 }}
                 animationBegin={0}
-                animationDuration={1500}
+                animationDuration={1200}
               />
             </AreaChart>
           )}

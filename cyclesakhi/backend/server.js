@@ -10,11 +10,16 @@ dotenv.config();
 
 const app = express();
 
-// ✅ FIXED: Restrict CORS to frontend URL only
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    credentials: true,
+    origin: function (origin, callback) {
+      if (!origin || origin.startsWith('http://localhost')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true
   })
 );
 
