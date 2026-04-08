@@ -4,32 +4,63 @@ import authMiddleware from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Log period date
-router.post('/log', authMiddleware, async (req, res) => {
-  try {
-    const { startDate, duration, endDate, symptoms, mood, flowLevel, notes } = req.body;
-
-    let calculatedEndDate;
-    if (duration) {
-  // If duration is provided → calculate endDate
-  calculatedEndDate = new Date(startDate);
-  calculatedEndDate.setDate(calculatedEndDate.getDate() + (duration - 1));
-
-} else if (endDate) {
-  // If frontend sends endDate → use it
-  calculatedEndDate = new Date(endDate);
-
-} else {
-  // ✅ DEFAULT FIX (no more error)
-  calculatedEndDate = new Date(startDate);
-  calculatedEndDate.setDate(calculatedEndDate.getDate() + 4); // default 5 days
+// ─── Helper: parse "YYYY-MM-DD" as a local calendar date (no timezone shift) ──
+function parseDateAsLocal(dateStr) {
+  const [year, month, day] = String(dateStr).split('-').map(Number);
+  return new Date(year, month - 1, day); // month is 0-indexed
 }
 
+// ─── Helper: convert any date value to "YYYY-MM-DD" string ───────────────────
+// FIX: history route was calling .split('-') on a Date object from MongoDB,
+//      which would produce NaN. This helper handles both strings and Date objects.
+function toDateString(value) {
+  if (!value) return null;
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+    return value.slice(0, 10);
+  }
+  const d = new Date(value);
+  const yyyy = d.getFullYear();
+  const mm   = String(d.getMonth() + 1).padStart(2, '0');
+  const dd   = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+// ─── POST /cycle/log ──────────────────────────────────────────────────────────
+router.post('/log', authMiddleware, async (req, res) => {
+  try {
+    // FIX: frontend now sends `duration` (was sending `length` which backend ignored,
+    //      causing every log to default to 5 days regardless of user input)
+    const { startDate, duration, endDate, symptoms, mood, flowLevel, notes } = req.body;
+
+    const start = parseDateAsLocal(startDate);
+
+    let calculatedEndDate;
+    if (duration && Number(duration) > 0) {
+      calculatedEndDate = parseDateAsLocal(startDate);
+      calculatedEndDate.setDate(calculatedEndDate.getDate() + (Number(duration) - 1));
+    } else if (endDate) {
+      calculatedEndDate = parseDateAsLocal(endDate);
+    } else {
+      // Default 5 days
+      calculatedEndDate = parseDateAsLocal(startDate);
+      calculatedEndDate.setDate(calculatedEndDate.getDate() + 4);
+    }
+
+    // Generate periodDates array (all individual days)
+    const periodDates = [];
+    for (let d = new Date(start); d <= calculatedEndDate; d.setDate(d.getDate() + 1)) {
+      const yyyy = d.getFullYear();
+      const mm   = String(d.getMonth() + 1).padStart(2, '0');
+      const dd   = String(d.getDate()).padStart(2, '0');
+      periodDates.push(`${yyyy}-${mm}-${dd}`);
+    }
+
     const newLog = new CycleData({
-      userId: req.user.id,
+      userId:      req.user.id,
       startDate,
-      endDate: calculatedEndDate,
-      symptoms: symptoms || [],
+      endDate:     calculatedEndDate,
+      periodDates,
+      symptoms:    symptoms || [],
       mood,
       flowLevel,
       notes,
@@ -37,33 +68,68 @@ router.post('/log', authMiddleware, async (req, res) => {
 
     const cycle = await newLog.save();
     res.json(cycle);
-
   } catch (err) {
-    console.error("LOG ERROR:", err); // 👈 important for debugging
-    res.status(500).send('Server Error');
+    console.error('LOG ERROR:', err);
+    res.status(500).json({ message: 'Server error while logging' });
   }
 });
-// Get cycle history
+
+// ─── GET /cycle/history ───────────────────────────────────────────────────────
 router.get('/history', authMiddleware, async (req, res) => {
   try {
-    const history = await CycleData.find({ userId: req.user.id }).sort({
-      startDate: -1,
+    const history = await CycleData.find({ userId: req.user.id }).sort({ startDate: -1 });
+
+    // FIX: was splitting a MongoDB Date object as a string (broke periodDates rebuild).
+    //      Now uses toDateString() helper that handles both Date objects and strings.
+    const updatedHistory = history.map(log => {
+      const plainLog = log.toObject();
+
+      if (plainLog.periodDates?.length) return plainLog; // already correct, skip
+
+      const startStr = toDateString(plainLog.startDate);
+      const endStr   = toDateString(plainLog.endDate);
+
+      if (!startStr || !endStr) return plainLog;
+
+      const [startY, startM, startD] = startStr.split('-').map(Number);
+      const [endY,   endM,   endD  ] = endStr.split('-').map(Number);
+
+      const periodDates = [];
+      let y = startY, m = startM, day = startD;
+
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        periodDates.push(
+          `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+        );
+        if (y === endY && m === endM && day === endD) break;
+
+        day++;
+        const daysInMonth = new Date(y, m, 0).getDate();
+        if (day > daysInMonth) {
+          day = 1;
+          m++;
+          if (m > 12) { m = 1; y++; }
+        }
+      }
+
+      plainLog.periodDates = periodDates;
+      return plainLog;
     });
-    res.json(history);
+
+    res.json(updatedHistory);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ message: 'Server error fetching history' });
   }
 });
 
-// Predict next period (Improved)
-// Predict next period (Median + Cap)
+// ─── GET /cycle/predict ───────────────────────────────────────────────────────
 router.get('/predict', authMiddleware, async (req, res) => {
   try {
-    // Get last 5 cycles
     const history = await CycleData.find({ userId: req.user.id })
       .sort({ startDate: -1 })
-      .limit(5);
+      .limit(6);
 
     if (history.length < 3) {
       return res.json({
@@ -73,67 +139,51 @@ router.get('/predict', authMiddleware, async (req, res) => {
       });
     }
 
-    // Calculate cycle lengths
-    let cycleLengths = [];
+    // Cycle lengths between consecutive period starts
+    const cycleLengths = [];
     for (let i = 0; i < history.length - 1; i++) {
-      const current = new Date(history[i].startDate);
-      const previous = new Date(history[i + 1].startDate);
-      const diffDays = Math.ceil((current - previous) / (1000 * 60 * 60 * 24));
-      cycleLengths.push(diffDays);
+      const curr = new Date(history[i].startDate);
+      const prev = new Date(history[i + 1].startDate);
+      const diff = Math.ceil((curr - prev) / 86_400_000);
+      if (diff > 0) cycleLengths.push(diff);
     }
 
-    // Use median of recent cycles to avoid outlier inflation
-    const recentCycles = cycleLengths.slice(0, 5); // last 5
-    recentCycles.sort((a, b) => a - b);
+    // Median (more robust than mean against outliers)
+    const sorted = [...cycleLengths].sort((a, b) => a - b);
+    const mid    = Math.floor(sorted.length / 2);
+    let predictedCycle =
+      sorted.length % 2 === 0
+        ? Math.round((sorted[mid - 1] + sorted[mid]) / 2)
+        : sorted[mid];
 
-    let predictedCycle;
-    const mid = Math.floor(recentCycles.length / 2);
-    if (recentCycles.length % 2 === 0) {
-      predictedCycle = Math.round((recentCycles[mid - 1] + recentCycles[mid]) / 2);
-    } else {
-      predictedCycle = recentCycles[mid];
-    }
-
-    // Cap cycle length to realistic range
+    // Cap to realistic range
     predictedCycle = Math.min(Math.max(predictedCycle, 21), 35);
 
     const lastPeriodDate = new Date(history[0].startDate);
-    const predictedDate = new Date(lastPeriodDate);
+    const predictedDate  = new Date(lastPeriodDate);
     predictedDate.setDate(predictedDate.getDate() + predictedCycle);
 
-    // Ovulation ~ 14 days before next period
+    // Ovulation ~14 days before next period
     const ovulationDate = new Date(predictedDate);
     ovulationDate.setDate(predictedDate.getDate() - 14);
 
-    // Confidence based on standard deviation
-    const avg = cycleLengths.reduce((a, b) => a + b, 0) / cycleLengths.length;
-    const variance =
-      cycleLengths.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) /
-      cycleLengths.length;
-    const stdDev = Math.sqrt(variance);
+    // Confidence via standard deviation
+    const avg      = cycleLengths.reduce((a, b) => a + b, 0) / cycleLengths.length;
+    const variance = cycleLengths.reduce((s, v) => s + (v - avg) ** 2, 0) / cycleLengths.length;
+    const stdDev   = Math.sqrt(variance);
+    const confidence = stdDev < 2 ? 'High' : stdDev < 5 ? 'Medium' : 'Low';
 
-    let confidence = 'Low';
-    if (stdDev < 2) confidence = 'High';
-    else if (stdDev < 5) confidence = 'Medium';
-
-    res.json({
-      predictedDate,
-      predictedCycleLength: predictedCycle,
-      ovulationDate,
-      confidence,
-    });
-
+    res.json({ predictedDate, predictedCycleLength: predictedCycle, ovulationDate, confidence });
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ message: 'Server error during prediction' });
   }
 });
-// Calculate PCOD risk score
+
+// ─── GET /cycle/pcod-risk ─────────────────────────────────────────────────────
 router.get('/pcod-risk', authMiddleware, async (req, res) => {
   try {
-    const history = await CycleData.find({ userId: req.user.id }).sort({
-      startDate: -1,
-    });
+    const history = await CycleData.find({ userId: req.user.id }).sort({ startDate: -1 });
 
     if (history.length < 2) {
       return res.json({
@@ -144,81 +194,59 @@ router.get('/pcod-risk', authMiddleware, async (req, res) => {
       });
     }
 
-    let cycleLengths = [];
+    let cycleLengths       = [];
     let irregularCyclesCount = 0;
 
-    // Calculate cycle lengths and count irregular cycles
     for (let i = 0; i < history.length - 1; i++) {
-      const current = new Date(history[i].startDate);
-      const previous = new Date(history[i + 1].startDate);
-      const diffDays = Math.ceil((current - previous) / (1000 * 60 * 60 * 24));
-      cycleLengths.push(diffDays);
-
-      if (diffDays > 35 || diffDays < 21) {
-        irregularCyclesCount++;
-      }
+      const curr = new Date(history[i].startDate);
+      const prev = new Date(history[i + 1].startDate);
+      const diff = Math.ceil((curr - prev) / 86_400_000);
+      cycleLengths.push(diff);
+      if (diff > 35 || diff < 21) irregularCyclesCount++;
     }
 
-    // Average gap between periods
-    const averageGap = cycleLengths.reduce((a, b) => a + b, 0) / cycleLengths.length;
-
-    // Percentage of irregular cycles
+    const averageGap       = cycleLengths.reduce((a, b) => a + b, 0) / cycleLengths.length;
     const irregularPercent = (irregularCyclesCount / cycleLengths.length) * 100;
 
-    // Symptom scoring per entry (average impact)
+    // Symptom scoring (case-insensitive)
     let totalSymptomScore = 0;
     history.forEach(entry => {
-      if (entry.symptoms?.includes("acne")) totalSymptomScore += 2;
-      if (entry.symptoms?.includes("hair_growth")) totalSymptomScore += 2;
-      if (entry.symptoms?.includes("weight_gain")) totalSymptomScore += 1;
-      if (entry.symptoms?.includes("irregular_periods")) totalSymptomScore += 2;
+      const s = (entry.symptoms || []).map(x => x.toLowerCase());
+      if (s.includes('acne'))             totalSymptomScore += 2;
+      if (s.includes('hair_growth'))      totalSymptomScore += 2;
+      if (s.includes('weight_gain'))      totalSymptomScore += 1;
+      if (s.includes('irregular_periods')) totalSymptomScore += 2;
     });
     const avgSymptomScore = totalSymptomScore / history.length;
 
-    // Base risk from average gap
-    let baseRisk = 0;
-    if (averageGap > 35) baseRisk = 70;
-    else if (averageGap >= 28 && averageGap <= 35) baseRisk = 40;
-    else baseRisk = 10;
+    const baseRisk =
+      averageGap > 35 ? 70 :
+      averageGap >= 28 ? 40 : 10;
 
-    // Weighted combination of risks
-    let riskScore = baseRisk * 0.7 + irregularPercent * 0.2 + avgSymptomScore * 0.1;
+    let riskScore = Math.min(
+      Math.round(baseRisk * 0.7 + irregularPercent * 0.2 + avgSymptomScore * 0.1),
+      100
+    );
 
-    // Cap at 100
-    riskScore = Math.min(Math.round(riskScore), 100);
+    const level   = riskScore >= 70 ? 'high' : riskScore >= 40 ? 'moderate' : 'normal';
+    const message =
+      level === 'high'     ? 'High risk of PCOD. Consider consulting a doctor.' :
+      level === 'moderate' ? 'Moderate risk. Monitor your cycle and symptoms.' :
+                             'Your cycle looks normal.';
 
-    // Determine risk level
-    let riskLevel = 'normal';
-    if (riskScore >= 70) riskLevel = 'high';
-    else if (riskScore >= 40) riskLevel = 'moderate';
-
-    // User-friendly message
-    let message = '';
-    if (riskLevel === 'high') {
-      message = 'High risk of PCOD. Consider consulting a doctor.';
-    } else if (riskLevel === 'moderate') {
-      message = 'Moderate risk. Monitor your cycle and symptoms.';
-    } else {
-      message = 'Your cycle looks normal.';
-    }
-
-    res.json({
-      riskScore,
-      level: riskLevel,
-      averageGap,
-      message,
-    });
+    res.json({ riskScore, level, averageGap, message });
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ message: 'Server error' });
   }
 });
-// Delete a cycle log
+
+// ─── DELETE /cycle/delete/:id ─────────────────────────────────────────────────
 router.delete('/delete/:id', authMiddleware, async (req, res) => {
   try {
     const deleted = await CycleData.findOneAndDelete({
-      _id: req.params.id,
-      userId: req.user.id, // 🔥 IMPORTANT SECURITY FIX
+      _id:    req.params.id,
+      userId: req.user.id, // Security: only delete own records
     });
 
     if (!deleted) {
@@ -226,10 +254,10 @@ router.delete('/delete/:id', authMiddleware, async (req, res) => {
     }
 
     res.json({ message: 'Log deleted successfully' });
-
   } catch (err) {
-    console.error("DELETE ERROR FULL:", err); // 👈 THIS WILL SHOW REAL ERROR
+    console.error('DELETE ERROR:', err);
     res.status(500).json({ message: 'Server error while deleting' });
   }
 });
+
 export default router;
