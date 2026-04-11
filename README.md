@@ -1,4 +1,4 @@
-# CycleSakhi
+# CycleSakhi-PCOS detection web app
 An AI-powered Women's Menstrual Health & PCOD Detection Platform.
 
 ## Features
