@@ -1,35 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { motion } from 'framer-motion';
-import { X, Droplets } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Droplets, AlertCircle, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
-import { useEffect } from 'react';
-import { AnimatePresence } from 'framer-motion';
-import { AlertCircle, Trash2 } from 'lucide-react';
 
-const SYMPTOMS = ['Cramps', 'Bloating', 'Mood Swings', 'Headache', 'Fatigue', 'Acne'];
-const MOODS = [
-  { emoji: '😊', label: 'Happy' },
-  { emoji: '😢', label: 'Sad' },
-  { emoji: '😤', label: 'Angry' },
-  { emoji: '😴', label: 'Tired' },
+const SYMPTOMS    = ['Cramps', 'Bloating', 'Mood Swings', 'Headache', 'Fatigue', 'Acne'];
+const MOODS       = [
+  { emoji: '😊', label: 'Happy'  },
+  { emoji: '😢', label: 'Sad'    },
+  { emoji: '😤', label: 'Angry'  },
+  { emoji: '😴', label: 'Tired'  },
   { emoji: '🤒', label: 'Unwell' },
 ];
 const FLOW_LEVELS = [
-  { key: 'Light',  icon: '💧', desc: '1–2 pads/day' },
-  { key: 'Medium', icon: '💧💧', desc: '3–4 pads/day' },
+  { key: 'Light',  icon: '💧',    desc: '1–2 pads/day' },
+  { key: 'Medium', icon: '💧💧',  desc: '3–4 pads/day' },
   { key: 'Heavy',  icon: '💧💧💧', desc: '5+ pads/day' },
 ];
 
-const PeriodLogModal = ({ date, onClose, onLogged, logId }) => {
-  const [flowLevel, setFlowLevel]   = useState('Medium');
-  const [symptoms, setSymptoms]     = useState([]);
-  const [mood, setMood]             = useState('😊');
-  const [notes, setNotes]           = useState('');
-  const [length, setLength]         = useState(5);
-  const [loading, setLoading]       = useState(false);
+// ─── Props ────────────────────────────────────────────────────────────────────
+// date        – "YYYY-MM-DD" string of the clicked calendar day
+// logId       – _id of the existing CycleData document, or null if unlogged
+// existingLog – the full log object (so we can pre-fill form fields), or null
+// onClose     – callback to close the modal
+// onLogged    – callback to refresh calendar data after log/delete
+const PeriodLogModal = ({ date, onClose, onLogged, logId, existingLog }) => {
+  // Pre-fill form from existing log when editing, otherwise defaults
+  const [flowLevel, setFlowLevel] = useState(existingLog?.flowLevel ?? 'Medium');
+  const [symptoms,  setSymptoms]  = useState(existingLog?.symptoms  ?? []);
+  const [mood,      setMood]      = useState(existingLog?.mood       ?? '😊');
+  const [notes,     setNotes]     = useState(existingLog?.notes      ?? '');
+  const [length,    setLength]    = useState(
+    existingLog?.periodDates?.length
+      ?? (existingLog?.duration ?? 5)
+  );
+  const [loading,       setLoading]       = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Re-sync if the parent passes a different log (e.g. navigating between logged days)
+  useEffect(() => {
+    if (existingLog) {
+      setFlowLevel(existingLog.flowLevel ?? 'Medium');
+      setSymptoms(existingLog.symptoms   ?? []);
+      setMood(existingLog.mood           ?? '😊');
+      setNotes(existingLog.notes         ?? '');
+      setLength(existingLog.periodDates?.length ?? (existingLog.duration ?? 5));
+    }
+  }, [existingLog]);
 
   const toggleSymptom = (s) =>
     setSymptoms(prev =>
@@ -44,10 +62,9 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId }) => {
   const handleLog = async () => {
     setLoading(true);
     try {
-      // FIX: send `length` as `duration` to match backend field name
       await api.post('/cycle/log', {
         startDate: date,
-        duration: length,      // ← was `length`, backend expects `duration`
+        duration: length,   // backend reads `duration`
         flowLevel,
         symptoms,
         mood,
@@ -63,23 +80,24 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId }) => {
     }
   };
 
-  // ─── Delete ──────────────────────────────────────────────────────────────────
-  // FIX: was referencing `log?._id` (undefined) — now uses `logId` prop correctly
-  const handleDelete = async () => {
-    if (!logId) return;
-    setLoading(true);
-    try {
-      await api.delete(`/cycle/delete/${logId}`);
-      toast.success('Log deleted 🗑');
-      onLogged();
-      onClose();
-    } catch (err) {
-      toast.error('Delete failed ❌');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ─── Delete single day ───────────────────────────────────────────────────────
+  // BUG FIX: was referencing `log?._id` (undefined in scope) — now uses the
+  // `logId` prop, which is the _id of the CycleData document that contains
+  // this date. The backend strips only this one date from periodDates and
+  // deletes the whole document only if periodDates becomes empty.
+ const handleDelete = async () => {
+  try {
+    console.log("TOKEN:", localStorage.getItem("accessToken")); // 👈 ADD HERE
 
+    await api.delete(`/cycle/delete-day/${logId}/${date}`);
+
+    onLogged();
+    onClose();
+  } catch (err) {
+    console.error(err); // 👈 also add this
+    toast.error("Delete failed");
+  }
+};
   return ReactDOM.createPortal(
     <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <motion.div
@@ -91,7 +109,6 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId }) => {
       >
         {/* ── Header ── */}
         <div className="relative bg-gradient-to-br from-[#FF6B8A] via-[#ff5276] to-[#e84393] p-6 text-white">
-          {/* Close */}
           <button
             onClick={onClose}
             className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 rounded-full p-1.5 transition-colors"
@@ -119,7 +136,7 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId }) => {
           </div>
         </div>
 
-        {/* ── Already logged view ── */}
+        {/* ── Already-logged view ── */}
         {logId ? (
           <div className="p-6 space-y-4">
             <div className="flex items-start gap-3 bg-pink-50 rounded-2xl p-4">
@@ -127,10 +144,31 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId }) => {
               <div>
                 <p className="text-sm font-semibold text-gray-800">Already logged</p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  You've already logged your period for this date. You can delete this entry if it was a mistake.
+                  This day is part of a logged period. You can remove just this day if it was a mistake.
                 </p>
               </div>
             </div>
+
+            {/* Summary chips */}
+            {existingLog && (
+              <div className="flex flex-wrap gap-2">
+                {existingLog.flowLevel && (
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-pink-50 text-[#FF6B8A] border border-pink-100">
+                    {existingLog.flowLevel} flow
+                  </span>
+                )}
+                {existingLog.mood && (
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-500 border border-purple-100">
+                    {existingLog.mood}
+                  </span>
+                )}
+                {(existingLog.symptoms ?? []).map(s => (
+                  <span key={s} className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-500 border border-gray-100">
+                    {s}
+                  </span>
+                ))}
+              </div>
+            )}
 
             <AnimatePresence>
               {confirmDelete ? (
@@ -138,10 +176,12 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId }) => {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="bg-red-50 rounded-2xl p-4 space-y-3"
+                  className="bg-red-50 rounded-2xl p-4 space-y-3 overflow-hidden"
                 >
-                  <p className="text-sm font-semibold text-red-700 text-center">Are you sure?</p>
-                  <p className="text-xs text-red-500 text-center">This will permanently delete this period log.</p>
+                  <p className="text-sm font-semibold text-red-700 text-center">Remove this day?</p>
+                  <p className="text-xs text-red-500 text-center">
+                    Only <strong>{formattedDate}</strong> will be removed from your period log.
+                  </p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setConfirmDelete(false)}
@@ -154,7 +194,7 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId }) => {
                       disabled={loading}
                       className="flex-1 py-2 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors disabled:opacity-60"
                     >
-                      {loading ? 'Deleting…' : 'Yes, delete'}
+                      {loading ? 'Removing…' : 'Yes, remove'}
                     </button>
                   </div>
                 </motion.div>
@@ -164,7 +204,7 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId }) => {
                     onClick={() => setConfirmDelete(true)}
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 transition-colors"
                   >
-                    <Trash2 size={15} /> Delete this log
+                    <Trash2 size={15} /> Remove this day
                   </button>
                   <button
                     onClick={onClose}
@@ -181,7 +221,7 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId }) => {
           <>
             <div className="p-6 space-y-6 max-h-[65vh] overflow-y-auto overscroll-contain">
 
-              {/* Period length — FIX: now inside the form, not outside the modal card */}
+              {/* Period length */}
               <div>
                 <p className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">
                   How long is your period?
