@@ -5,13 +5,268 @@ import { useLanguage } from '../context/LanguageContext';
 import api from '../api/axios';
 
 const appsData = [
-  { id: 'zepto',   name: 'Zepto',   color: '#3b0060', category: 'Pads',        link: 'https://www.zeptonow.com', image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400&h=220', product: 'Sanitary Pads / Tampons'  },
-  { id: 'blinkit', name: 'Blinkit', color: '#ffc200', category: 'Pads',        link: 'https://blinkit.com',      image: 'https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&q=80&w=400&h=220', product: 'Whisper Ultra Clean'      },
-  { id: 'jiomart', name: 'JioMart', color: '#00529e', category: 'Pain Relief', link: 'https://www.jiomart.com',  image: 'https://images.unsplash.com/photo-1584305574647-0cc929a2bb9f?auto=format&fit=crop&q=80&w=400&h=220', product: 'Feminine Hygiene Care'   },
-  { id: 'minutes', name: 'Minutes', color: '#ff4d4f', category: 'Tampons',     link: '#',                        image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=400&h=220', product: 'Emergency Delivery'       },
+  // ── PADS ──────────────────────────────────────────────────────────────
+  {
+    id: 'zepto-pads',
+    name: 'Zepto',
+    color: '#3b0060',
+    category: 'Pads',
+    product: 'Sanitary Pads',
+    link: 'https://www.zepto.com/search?query=sanitary+pads',
+    image: 'https://5.imimg.com/data5/SELLER/Default/2023/9/340696951/WG/PI/YT/100035246/wings-sanitary-napkin-500x500.jpg',
+  },
+  {
+    id: 'blinkit-pads',
+    name: 'Blinkit',
+    color: '#ffc200',
+    category: 'Pads',
+    product: 'Overnight Pads',
+    link: 'https://blinkit.com/s/?q=overnight+pads',
+    image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSEJk8PGM_tUqHbK2lorK6eGmyBUwkI3rMM_A&s',
+  },
+  {
+    id: 'minutes-pads',
+    name: 'Flipkart Minutes',
+    color: '#ff4d4f',
+    category: 'Pads',
+    product: 'Ultra Thin Pads',
+    link: 'https://www.flipkart.com/search?q=ultra+thin+sanitary+pads&marketplace=HYPERLOCAL',
+    image: 'https://5.imimg.com/data5/OF/BN/VT/SELLER-46311541/240-mm-ultra-thin-sanitary-pad.jpg',
+  },
+  {
+    id: 'swiggy-pads',
+    name: 'Swiggy Instamart',
+    color: '#fc8019',
+    category: 'Pads',
+    product: 'Biodegradable Pads',
+    link: 'https://www.swiggy.com/instamart/search?query=biodegradable+pads',
+    image: 'https://images.herzindagi.info/image/2023/Jun/biodegradable-sanitary-pads-to-replace-plastic-pads.jpg',
+  },
+
+  // ── TAMPONS ───────────────────────────────────────────────────────────
+  {
+    id: 'blinkit-tampons',
+    name: 'Blinkit',
+    color: '#ffc200',
+    category: 'Tampons',
+    product: 'Tampons',
+    link: 'https://blinkit.com/s/?q=tampons',
+    image: 'https://images.pexels.com/photos/5218033/pexels-photo-5218033.jpeg?cs=srgb&dl=pexels-shvetsa-5218033.jpg&fm=jpg',
+  },
+  {
+    id: 'zepto-tampons',
+    name: 'Zepto',
+    color: '#3b0060',
+    category: 'Tampons',
+    product: 'Organic Tampons',
+    link: 'https://www.zepto.com/search?query=organic+tampons',
+    image: 'https://hips.hearstapps.com/hmg-prod/images/best-eco-friendly-tampons-2023-recyclable-biodegradable-picks-64d65db6bc291.jpg?crop=0.669xw:1.00xh;0.0586xw,0&resize=640:*',
+  },
+  {
+    id: 'swiggy-tampons',
+    name: 'Swiggy Instamart',
+    color: '#fc8019',
+    category: 'Tampons',
+    product: 'Tampons with Applicator',
+    link: 'https://www.swiggy.com/instamart/search?query=tampons',
+    image: 'https://images.pexels.com/photos/3958518/pexels-photo-3958518.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+  },
+
+  // ── MENSTRUAL CUPS ────────────────────────────────────────────────────
+  {
+    id: 'amazon-cup',
+    name: 'Amazon',
+    color: '#ff9900',
+    category: 'Menstrual Cup',
+    product: 'Menstrual Cup',
+    link: 'https://www.amazon.in/s?k=menstrual+cup',
+    image: 'https://c.stocksy.com/a/Y8iA00/z9/2552946.jpg?1580226051',
+  },
+  {
+    id: 'flipkart-cup',
+    name: 'Flipkart',
+    color: '#2874f0',
+    category: 'Menstrual Cup',
+    product: 'Reusable Menstrual Cup',
+    link: 'https://www.flipkart.com/search?q=menstrual+cup',
+    image: 'https://cdn.shopify.com/s/files/1/0624/0655/7914/files/Menstrual_Cup_are_Eco-friendly_1024x1024.png?v=1681648310',
+  },
+  {
+    id: 'zepto-cup',
+    name: 'Zepto',
+    color: '#3b0060',
+    category: 'Menstrual Cup',
+    product: 'Silicone Menstrual Cup',
+    link: 'https://www.zepto.com/search?query=menstrual+cup',
+    image: 'https://5.imimg.com/data5/ANDROID/Default/2021/9/DQ/AF/MW/89424372/product-jpeg-500x500.jpg',
+  },
+
+  // ── PERIOD PANTIES ────────────────────────────────────────────────────
+  {
+    id: 'flipkart-panty',
+    name: 'Flipkart Minutes',
+    color: '#ff4d4f',
+    category: 'Period Panty',
+    product: 'Period Panty',
+    link: 'https://www.flipkart.com/search?q=period+panty&marketplace=HYPERLOCAL',
+    image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTXBUipMyqWzQfoA7CRsBZeE3o8qTN1E7FbLw&s',
+  },
+  {
+    id: 'amazon-panty',
+    name: 'Amazon',
+    color: '#ff9900',
+    category: 'Period Panty',
+    product: 'Leak-proof Period Underwear',
+    link: 'https://www.amazon.in/s?k=period+underwear+leak+proof',
+    image: 'https://fabpad.in/cdn/shop/files/High-waist_reusable_period_underwear_with_full_leak_protection.jpg?v=1755586439&width=1946',
+  },
+
+  // ── PAIN RELIEF ───────────────────────────────────────────────────────
+  {
+    id: 'jiomart-pain',
+    name: 'JioMart',
+    color: '#00529e',
+    category: 'Pain Relief',
+    product: 'Meftal Spas',
+    link: 'https://www.jiomart.com/search?q=meftal+spas',
+    image: 'https://img.pristyncare.com/static_pages/meftal-page/madison.webp',
+  },
+  {
+    id: 'zepto-pain',
+    name: 'Zepto',
+    color: '#3b0060',
+    category: 'Pain Relief',
+    product: 'Period Pain Relief Patches',
+    link: 'https://www.zepto.com/search?query=period+pain+relief',
+    image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR1gM_aVIYHIioBKzvRoSgCsKuV_BiN2mmwPQ&s',
+  },
+  {
+    id: 'blinkit-pain',
+    name: 'Blinkit',
+    color: '#ffc200',
+    category: 'Pain Relief',
+    product: 'Hot Water Bag',
+    link: 'https://blinkit.com/s/?q=hot+water+bag',
+    image: 'https://kangaroocareindia.com/static/media/blog-196.3b803dd730426ecd1b0d.jpg',
+  },
+  {
+    id: 'swiggy-pain',
+    name: 'Swiggy Instamart',
+    color: '#fc8019',
+    category: 'Pain Relief',
+    product: 'Heating Pad',
+    link: 'https://www.swiggy.com/instamart/search?query=heating+pad',
+    image: 'https://m.media-amazon.com/images/I/71b722PZokL.jpg',
+  },
+  {
+    id: 'pharmeasy-pain',
+    name: 'PharmEasy',
+    color: '#00b386',
+    category: 'Pain Relief',
+    product: 'Buscopan / Antispasmodic',
+    link: 'https://pharmeasy.in/search/all?name=period+pain',
+    image: 'https://img1.exportersindia.com/product_images/bc-small/150x150/2021/8/9139752/antispasmodic-tablets-1629866672-5956854.jpeg',
+  },
+
+  // ── INTIMATE HYGIENE ──────────────────────────────────────────────────
+  {
+    id: 'zepto-hygiene',
+    name: 'Zepto',
+    color: '#3b0060',
+    category: 'Intimate Hygiene',
+    product: 'Intimate Wash',
+    link: 'https://www.zepto.com/search?query=intimate+wash',
+    image: 'https://distrapi.blob.core.windows.net/strapi-uploads/assets/Best_Intimate_Hygiene_Wash_Brands_in_India_ed3dd472d0.jpg',
+  },
+  {
+    id: 'blinkit-hygiene',
+    name: 'Blinkit',
+    color: '#ffc200',
+    category: 'Intimate Hygiene',
+    product: 'Feminine Hygiene Wipes',
+    link: 'https://blinkit.com/s/?q=feminine+wipes',
+    image: 'https://i.pinimg.com/236x/49/12/66/49126686f83f6cacb3f07a0e68ba659e.jpg',
+  },
+  {
+    id: 'jiomart-hygiene',
+    name: 'JioMart',
+    color: '#00529e',
+    category: 'Intimate Hygiene',
+    product: 'Panty Liners',
+    link: 'https://www.jiomart.com/search?q=panty+liners',
+    image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRgKDYLlVFq8iGjubEFmUYVKjWkdYR8bSBEAQ&s',
+  },
+
+  // ── SUPPLEMENTS ───────────────────────────────────────────────────────
+  {
+    id: 'amazon-iron',
+    name: 'Amazon',
+    color: '#ff9900',
+    category: 'Supplements',
+    product: 'Iron + Folic Acid Tablets',
+    link: 'https://www.amazon.in/s?k=iron+folic+acid+tablets+women',
+    image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ8WHA6jujLULGmc02z0O8gSM7Hk5acy_RCXw&s',
+  },
+  {
+    id: 'pharmeasy-mag',
+    name: 'PharmEasy',
+    color: '#00b386',
+    category: 'Supplements',
+    product: 'Magnesium for Cramps',
+    link: 'https://pharmeasy.in/search/all?name=magnesium+supplement',
+    image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS-6oGGQuQu-aARrJV8p4U9W2adJb7B021cVg&s',
+  },
+  {
+    id: 'zepto-supplements',
+    name: 'Zepto',
+    color: '#3b0060',
+    category: 'Supplements',
+    product: 'Women\'s Multivitamin',
+    link: 'https://www.zepto.com/search?query=womens+multivitamin',
+    image: 'https://img.freepik.com/premium-photo/pink-vitamin-pills-women-white-background-multivitamins-women-s-health-isolate-free-space_94046-8425.jpg',
+  },
+
+  // ── COMFORT & WELLNESS ────────────────────────────────────────────────
+  {
+    id: 'blinkit-comfort',
+    name: 'Blinkit',
+    color: '#ffc200',
+    category: 'Comfort',
+    product: 'Dark Chocolate (mood boost)',
+    link: 'https://blinkit.com/s/?q=dark+chocolate',
+    image: 'https://images.unsplash.com/photo-1511381939415-e44015466834?auto=format&fit=crop&q=80&w=400&h=220',
+  },
+  {
+    id: 'swiggy-tea',
+    name: 'Swiggy Instamart',
+    color: '#fc8019',
+    category: 'Comfort',
+    product: 'Chamomile / Ginger Tea',
+    link: 'https://www.swiggy.com/instamart/search?query=chamomile+tea',
+    image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&q=80&w=400&h=220',
+  },
+  {
+    id: 'amazon-pad-disposal',
+    name: 'Amazon',
+    color: '#ff9900',
+    category: 'Comfort',
+    product: 'Pad Disposal Bags',
+    link: 'https://www.amazon.in/s?k=sanitary+pad+disposal+bags',
+    image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSsWbeqjlGVNgeiGF23nNOm6FbrFvV1jkGqFQ&s',
+  },
 ];
 
-const CATEGORIES = ['All', 'Pads', 'Tampons', 'Pain Relief'];
+const CATEGORIES = [
+  'All',
+  'Pads',
+  'Tampons',
+  'Menstrual Cup',
+  'Period Panty',
+  'Pain Relief',
+  'Intimate Hygiene',
+  'Supplements',
+  'Comfort',
+];
 
 const Orders = () => {
   const { t } = useLanguage();
@@ -26,7 +281,7 @@ const Orders = () => {
           const days = Math.ceil((new Date(res.data.predictedDate) - new Date()) / (1000 * 60 * 60 * 24));
           if (days >= 0 && days <= 3) setPeriodSoon(true);
         }
-      } catch {}
+      } catch { }
     };
     checkPrediction();
   }, []);
@@ -62,11 +317,10 @@ const Orders = () => {
               key={f}
               id={`cat-${f.toLowerCase().replace(' ', '-')}`}
               onClick={() => setFilter(f)}
-              className={`flex-shrink-0 px-5 py-2.5 min-h-[44px] rounded-xl font-semibold text-sm transition-all ${
-                filter === f
-                  ? 'bg-[#FF6B8A] text-white shadow-md'
-                  : 'bg-white/70 backdrop-blur-xl border border-gray-100 text-gray-500 hover:text-gray-800'
-              }`}
+              className={`flex-shrink-0 px-5 py-2.5 min-h-[44px] rounded-xl font-semibold text-sm transition-all ${filter === f
+                ? 'bg-[#FF6B8A] text-white shadow-md'
+                : 'bg-white/70 backdrop-blur-xl border border-gray-100 text-gray-500 hover:text-gray-800'
+                }`}
             >
               {f === 'All' ? t('all') : f}
             </button>
