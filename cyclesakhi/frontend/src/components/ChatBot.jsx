@@ -68,7 +68,7 @@ const ChatBot = () => {
 
     try {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      
+
       if (!apiKey || apiKey === 'your_key_here' || apiKey === 'YOUR_GEMINI_API_KEY') {
         throw new Error('No valid API key');
       }
@@ -80,7 +80,6 @@ const ChatBot = () => {
       const response = await result.response.text();
       setMessages(prev => [...prev, { text: response, sender: 'bot' }]);
     } catch {
-      // Smart fallback mock responses
       const lowerText = userText.toLowerCase();
       let reply = "That's a great question! 🌸 For menstrual health, I always recommend staying hydrated, eating iron-rich foods, and getting enough rest. Consult your doctor if symptoms are severe. You've got this! 💪";
 
@@ -99,39 +98,54 @@ const ChatBot = () => {
 
   return (
     <>
-      {/* Floating Button */}
+      {/* Floating Button — sits above bottom tab bar on mobile (mb-20 lg:mb-6) */}
       {!isOpen && (
         <motion.button
+          id="chatbot-open"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 w-16 h-16 rounded-full bg-gradient-to-br from-[#FF6B8A] to-pink-500 text-white flex items-center justify-center shadow-[0_8px_30px_rgba(255,107,138,0.5)] z-50"
+          className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 w-14 h-14 lg:w-16 lg:h-16 rounded-full bg-gradient-to-br from-[#FF6B8A] to-pink-500 text-white flex items-center justify-center shadow-[0_8px_30px_rgba(255,107,138,0.5)] z-40"
+          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
         >
-          <MessageCircle size={28} />
+          <MessageCircle size={24} />
         </motion.button>
       )}
 
       <AnimatePresence>
         {isOpen && (
           <motion.div
+            id="chatbot-panel"
             initial={{ opacity: 0, x: 100, scale: 0.95 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 100, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed bottom-6 right-6 w-96 h-[600px] bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-pink-100 z-50 flex flex-col overflow-hidden"
+            className={[
+              /* Mobile: full-screen overlay */
+              'fixed inset-0 z-50 flex flex-col bg-white/98 backdrop-blur-xl',
+              /* sm+: corner panel */
+              'sm:inset-auto sm:bottom-4 sm:right-4 sm:w-96 sm:h-[580px] sm:rounded-3xl sm:shadow-2xl sm:border sm:border-pink-100',
+              /* lg: sits above tab bar (none) but floated over sidebar */
+              'lg:bottom-6 lg:right-6',
+            ].join(' ')}
+            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-[#FF6B8A] to-pink-500 p-5 flex items-center justify-between flex-shrink-0">
+            <div className="bg-gradient-to-r from-[#FF6B8A] to-pink-500 p-4 sm:p-5 flex items-center justify-between flex-shrink-0 sm:rounded-t-3xl">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-full flex items-center justify-center text-xl">🌸</div>
+                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white/20 backdrop-blur rounded-full flex items-center justify-center text-xl">🌸</div>
                 <div>
-                  <p className="font-bold text-white text-base">Sakhi</p>
+                  <p className="font-bold text-white text-sm sm:text-base">Sakhi</p>
                   <p className="text-pink-100 text-xs">Your Health Assistant</p>
                 </div>
               </div>
-              <button onClick={() => setIsOpen(false)} className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors">
+              <button
+                id="chatbot-close"
+                onClick={() => setIsOpen(false)}
+                className="bg-white/20 p-2 min-h-[40px] min-w-[40px] rounded-full hover:bg-white/30 transition-colors flex items-center justify-center"
+              >
                 <X size={18} className="text-white" />
               </button>
             </div>
@@ -145,7 +159,7 @@ const ChatBot = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`max-w-[82%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                  <div className={`max-w-[82%] px-3 py-2.5 sm:px-4 sm:py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
                     msg.sender === 'user'
                       ? 'bg-gradient-to-br from-[#FF6B8A] to-pink-400 text-white rounded-tr-sm shadow-md'
                       : 'bg-white text-gray-700 border border-gray-100 shadow-sm rounded-tl-sm'
@@ -156,7 +170,7 @@ const ChatBot = () => {
               ))}
               {loading && (
                 <div className="flex justify-start">
-                  <div className="bg-white px-5 py-4 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 flex gap-1.5 items-center">
+                  <div className="bg-white px-4 py-3 sm:px-5 sm:py-4 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 flex gap-1.5 items-center">
                     {[0, 0.2, 0.4].map((delay, i) => (
                       <div key={i} className="w-2 h-2 bg-[#FF6B8A] rounded-full animate-bounce" style={{ animationDelay: `${delay}s` }} />
                     ))}
@@ -166,13 +180,14 @@ const ChatBot = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Replies */}
-            <div className="px-4 py-2 flex gap-2 overflow-x-auto flex-shrink-0 scrollbar-hide border-t border-gray-100">
+            {/* Quick Replies — horizontally scrollable */}
+            <div className="px-3 py-2 flex gap-2 overflow-x-auto flex-shrink-0 scrollbar-hide border-t border-gray-100">
               {QUICK_REPLIES.map(r => (
                 <button
                   key={r}
+                  id={`chatbot-quick-${r.slice(0, 10).replace(/\s/g, '-')}`}
                   onClick={() => sendMessage(r)}
-                  className="flex-shrink-0 text-xs bg-pink-50 text-[#FF6B8A] font-medium px-3 py-1.5 rounded-full border border-pink-200 hover:bg-pink-100 transition-colors"
+                  className="flex-shrink-0 text-xs bg-pink-50 text-[#FF6B8A] font-medium px-3 py-2 min-h-[36px] rounded-full border border-pink-200 hover:bg-pink-100 transition-colors"
                 >
                   {r}
                 </button>
@@ -180,20 +195,22 @@ const ChatBot = () => {
             </div>
 
             {/* Input */}
-            <div className="p-4 flex-shrink-0 bg-white border-t border-gray-100">
+            <div className="p-3 sm:p-4 flex-shrink-0 bg-white border-t border-gray-100">
               <div className="flex items-center gap-2 bg-gray-50 rounded-2xl px-4 py-2.5 border border-gray-200 focus-within:border-[#FF6B8A] transition-colors">
                 <input
+                  id="chatbot-input"
                   type="text"
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
                   placeholder={t('chatbot_placeholder')}
-                  className="flex-1 bg-transparent border-none outline-none text-sm text-gray-700"
+                  className="flex-1 bg-transparent border-none outline-none text-sm text-gray-700 min-h-[36px]"
                 />
                 <button
+                  id="chatbot-send"
                   onClick={() => sendMessage()}
                   disabled={loading || !input.trim()}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+                  className={`w-9 h-9 min-h-[36px] rounded-xl flex items-center justify-center transition-all ${
                     input.trim() ? 'bg-[#FF6B8A] text-white shadow-md hover:bg-pink-600' : 'bg-gray-200 text-gray-400'
                   }`}
                 >

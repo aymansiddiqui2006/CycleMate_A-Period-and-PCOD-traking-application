@@ -22,23 +22,21 @@ const FLOW_LEVELS = [
 // ─── Props ────────────────────────────────────────────────────────────────────
 // date        – "YYYY-MM-DD" string of the clicked calendar day
 // logId       – _id of the existing CycleData document, or null if unlogged
-// existingLog – the full log object (so we can pre-fill form fields), or null
+// existingLog – the full log object (pre-fill form fields), or null
 // onClose     – callback to close the modal
 // onLogged    – callback to refresh calendar data after log/delete
 const PeriodLogModal = ({ date, onClose, onLogged, logId, existingLog }) => {
-  // Pre-fill form from existing log when editing, otherwise defaults
   const [flowLevel, setFlowLevel] = useState(existingLog?.flowLevel ?? 'Medium');
   const [symptoms,  setSymptoms]  = useState(existingLog?.symptoms  ?? []);
   const [mood,      setMood]      = useState(existingLog?.mood       ?? '😊');
   const [notes,     setNotes]     = useState(existingLog?.notes      ?? '');
   const [length,    setLength]    = useState(
-    existingLog?.periodDates?.length
-      ?? (existingLog?.duration ?? 5)
+    existingLog?.periodDates?.length ?? (existingLog?.duration ?? 5)
   );
   const [loading,       setLoading]       = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Re-sync if the parent passes a different log (e.g. navigating between logged days)
+  // Re-sync if parent passes a different log
   useEffect(() => {
     if (existingLog) {
       setFlowLevel(existingLog.flowLevel ?? 'Medium');
@@ -64,7 +62,7 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId, existingLog }) => {
     try {
       await api.post('/cycle/log', {
         startDate: date,
-        duration: length,   // backend reads `duration`
+        duration: length,
         flowLevel,
         symptoms,
         mood,
@@ -80,36 +78,38 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId, existingLog }) => {
     }
   };
 
-  // ─── Delete single day ───────────────────────────────────────────────────────
-  // BUG FIX: was referencing `log?._id` (undefined in scope) — now uses the
-  // `logId` prop, which is the _id of the CycleData document that contains
-  // this date. The backend strips only this one date from periodDates and
-  // deletes the whole document only if periodDates becomes empty.
- const handleDelete = async () => {
-  try {
-    console.log("TOKEN:", localStorage.getItem("accessToken")); // 👈 ADD HERE
+  // ─── Delete single day ──────────────────────────────────────────────────────
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/cycle/delete-day/${logId}/${date}`);
+      onLogged();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      toast.error('Delete failed');
+    }
+  };
 
-    await api.delete(`/cycle/delete-day/${logId}/${date}`);
-
-    onLogged();
-    onClose();
-  } catch (err) {
-    console.error(err); // 👈 also add this
-    toast.error("Delete failed");
-  }
-};
   return ReactDOM.createPortal(
-    <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    /* Backdrop — mobile: bottom sheet, md+: centered overlay */
+    <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center">
       <motion.div
         initial={{ opacity: 0, y: 60 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 60 }}
         transition={{ type: 'spring', stiffness: 320, damping: 32 }}
         className="bg-white w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl shadow-2xl overflow-hidden border border-pink-100"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
+        {/* Drag handle — mobile only */}
+        <div className="flex justify-center pt-3 pb-1 sm:hidden">
+          <div className="w-10 h-1 bg-gray-300 rounded-full" />
+        </div>
+
         {/* ── Header ── */}
-        <div className="relative bg-gradient-to-br from-[#FF6B8A] via-[#ff5276] to-[#e84393] p-6 text-white">
+        <div className="relative bg-gradient-to-br from-[#FF6B8A] via-[#ff5276] to-[#e84393] p-5 sm:p-6 text-white">
           <button
+            id="modal-close"
             onClick={onClose}
             className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 rounded-full p-1.5 transition-colors"
           >
@@ -117,11 +117,11 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId, existingLog }) => {
           </button>
 
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center">
-              <Droplets size={22} className="text-white" />
+            <div className="w-10 h-10 sm:w-11 sm:h-11 bg-white/20 rounded-2xl flex items-center justify-center">
+              <Droplets size={20} className="text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-bold tracking-tight">
+              <h3 className="text-base sm:text-lg font-bold tracking-tight">
                 {logId ? 'Period Logged' : 'Log Period'}
               </h3>
               <p className="text-pink-100 text-xs mt-0.5 font-medium">{formattedDate}</p>
@@ -138,7 +138,7 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId, existingLog }) => {
 
         {/* ── Already-logged view ── */}
         {logId ? (
-          <div className="p-6 space-y-4">
+          <div className="p-4 sm:p-6 space-y-4">
             <div className="flex items-start gap-3 bg-pink-50 rounded-2xl p-4">
               <AlertCircle size={18} className="text-[#FF6B8A] mt-0.5 flex-shrink-0" />
               <div>
@@ -184,15 +184,17 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId, existingLog }) => {
                   </p>
                   <div className="flex gap-2">
                     <button
+                      id="modal-cancel-delete"
                       onClick={() => setConfirmDelete(false)}
-                      className="flex-1 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                      className="flex-1 py-3 min-h-[48px] rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
                     >
                       Cancel
                     </button>
                     <button
+                      id="modal-confirm-delete"
                       onClick={handleDelete}
                       disabled={loading}
-                      className="flex-1 py-2 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors disabled:opacity-60"
+                      className="flex-1 py-3 min-h-[48px] rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors disabled:opacity-60"
                     >
                       {loading ? 'Removing…' : 'Yes, remove'}
                     </button>
@@ -201,14 +203,16 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId, existingLog }) => {
               ) : (
                 <motion.div initial={{ opacity: 1 }} className="flex flex-col gap-2">
                   <button
+                    id="modal-remove-day"
                     onClick={() => setConfirmDelete(true)}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 py-3 min-h-[48px] rounded-2xl border-2 border-red-200 text-red-500 text-sm font-semibold hover:bg-red-50 transition-colors"
                   >
                     <Trash2 size={15} /> Remove this day
                   </button>
                   <button
+                    id="modal-close-logged"
                     onClick={onClose}
-                    className="w-full py-3 rounded-2xl bg-gray-100 text-gray-600 text-sm font-semibold hover:bg-gray-200 transition-colors"
+                    className="w-full py-3 min-h-[48px] rounded-2xl bg-gray-100 text-gray-600 text-sm font-semibold hover:bg-gray-200 transition-colors"
                   >
                     Close
                   </button>
@@ -219,7 +223,7 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId, existingLog }) => {
         ) : (
           /* ── New log form ── */
           <>
-            <div className="p-6 space-y-6 max-h-[65vh] overflow-y-auto overscroll-contain">
+            <div className="p-4 sm:p-6 space-y-5 max-h-[60vh] sm:max-h-[65vh] overflow-y-auto overscroll-contain">
 
               {/* Period length */}
               <div>
@@ -228,8 +232,9 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId, existingLog }) => {
                 </p>
                 <div className="flex items-center gap-3">
                   <button
+                    id="modal-length-minus"
                     onClick={() => setLength(l => Math.max(1, l - 1))}
-                    className="w-9 h-9 rounded-full border-2 border-gray-200 text-gray-600 font-bold flex items-center justify-center hover:border-[#FF6B8A] hover:text-[#FF6B8A] transition-colors text-lg leading-none"
+                    className="w-10 h-10 min-h-[44px] rounded-full border-2 border-gray-200 text-gray-600 font-bold flex items-center justify-center hover:border-[#FF6B8A] hover:text-[#FF6B8A] transition-colors text-lg leading-none"
                   >
                     −
                   </button>
@@ -238,8 +243,9 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId, existingLog }) => {
                     <span className="text-sm text-gray-400 ml-1">days</span>
                   </div>
                   <button
+                    id="modal-length-plus"
                     onClick={() => setLength(l => Math.min(10, l + 1))}
-                    className="w-9 h-9 rounded-full border-2 border-gray-200 text-gray-600 font-bold flex items-center justify-center hover:border-[#FF6B8A] hover:text-[#FF6B8A] transition-colors text-lg leading-none"
+                    className="w-10 h-10 min-h-[44px] rounded-full border-2 border-gray-200 text-gray-600 font-bold flex items-center justify-center hover:border-[#FF6B8A] hover:text-[#FF6B8A] transition-colors text-lg leading-none"
                   >
                     +
                   </button>
@@ -259,8 +265,9 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId, existingLog }) => {
                   {FLOW_LEVELS.map(f => (
                     <button
                       key={f.key}
+                      id={`modal-flow-${f.key.toLowerCase()}`}
                       onClick={() => setFlowLevel(f.key)}
-                      className={`py-3 px-2 rounded-2xl border-2 flex flex-col items-center gap-1 transition-all ${
+                      className={`py-3 min-h-[64px] px-2 rounded-2xl border-2 flex flex-col items-center gap-1 transition-all ${
                         flowLevel === f.key
                           ? 'border-[#FF6B8A] bg-pink-50 shadow-sm'
                           : 'border-gray-100 bg-white hover:border-pink-200'
@@ -270,7 +277,7 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId, existingLog }) => {
                       <span className={`text-xs font-bold ${flowLevel === f.key ? 'text-[#FF6B8A]' : 'text-gray-500'}`}>
                         {f.key}
                       </span>
-                      <span className="text-[10px] text-gray-400">{f.desc}</span>
+                      <span className="text-[10px] text-gray-400 hidden sm:block">{f.desc}</span>
                     </button>
                   ))}
                 </div>
@@ -283,8 +290,9 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId, existingLog }) => {
                   {SYMPTOMS.map(s => (
                     <button
                       key={s}
+                      id={`modal-symptom-${s.toLowerCase().replace(' ', '-')}`}
                       onClick={() => toggleSymptom(s)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-all ${
+                      className={`px-3 py-2 min-h-[40px] rounded-full text-xs font-semibold border-2 transition-all ${
                         symptoms.includes(s)
                           ? 'bg-[#FF6B8A] text-white border-[#FF6B8A] shadow-sm'
                           : 'bg-white text-gray-500 border-gray-100 hover:border-pink-200'
@@ -303,9 +311,10 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId, existingLog }) => {
                   {MOODS.map(m => (
                     <button
                       key={m.emoji}
+                      id={`modal-mood-${m.label.toLowerCase()}`}
                       onClick={() => setMood(m.emoji)}
                       title={m.label}
-                      className={`flex-1 py-2 rounded-2xl text-xl border-2 transition-all ${
+                      className={`flex-1 py-2.5 min-h-[48px] rounded-2xl text-xl border-2 transition-all ${
                         mood === m.emoji
                           ? 'border-[#FF6B8A] bg-pink-50 scale-110 shadow-sm'
                           : 'border-gray-100 hover:border-pink-200'
@@ -321,6 +330,7 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId, existingLog }) => {
               <div>
                 <p className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Notes (optional)</p>
                 <textarea
+                  id="modal-notes"
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
                   placeholder="Anything else you want to remember…"
@@ -331,17 +341,19 @@ const PeriodLogModal = ({ date, onClose, onLogged, logId, existingLog }) => {
             </div>
 
             {/* Actions */}
-            <div className="px-6 pb-6 pt-2 flex gap-2 border-t border-gray-100">
+            <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex gap-2 border-t border-gray-100">
               <button
+                id="modal-cancel"
                 onClick={onClose}
-                className="flex-none px-5 py-3 rounded-2xl border-2 border-gray-100 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
+                className="flex-none px-4 sm:px-5 py-3 min-h-[48px] rounded-2xl border-2 border-gray-100 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
+                id="modal-log-submit"
                 onClick={handleLog}
                 disabled={loading}
-                className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#FF6B8A] to-pink-500 text-white text-sm font-bold shadow-lg shadow-pink-200 hover:shadow-pink-300 transition-all disabled:opacity-60 active:scale-[0.98]"
+                className="flex-1 py-3 min-h-[48px] rounded-2xl bg-gradient-to-r from-[#FF6B8A] to-pink-500 text-white text-sm font-bold shadow-lg shadow-pink-200 hover:shadow-pink-300 transition-all disabled:opacity-60 active:scale-[0.98]"
               >
                 {loading ? 'Saving…' : 'Log Period 🌸'}
               </button>

@@ -7,15 +7,15 @@ import {
   ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 
-/* ── Custom Tooltip ──────────────────────────────────────────────────────── */
+/* ── Custom Tooltip ─────────────────────────────────────────────────────── */
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white px-4 py-3 rounded-2xl shadow-xl border border-pink-100">
-      <p className="text-[11px] text-gray-400 mb-1 font-medium uppercase tracking-wider">{label}</p>
-      <p className="text-2xl font-black text-[#FF6B8A] leading-none">
+    <div className="bg-white px-3 py-2 sm:px-4 sm:py-3 rounded-2xl shadow-xl border border-pink-100">
+      <p className="text-[10px] sm:text-[11px] text-gray-400 mb-1 font-medium uppercase tracking-wider">{label}</p>
+      <p className="text-xl sm:text-2xl font-black text-[#FF6B8A] leading-none">
         {payload[0].value}
-        <span className="text-sm font-medium text-gray-400 ml-1">days</span>
+        <span className="text-xs sm:text-sm font-medium text-gray-400 ml-1">days</span>
       </p>
     </div>
   );
@@ -28,66 +28,61 @@ const axisProps = {
 };
 
 const CHART_TYPES = [
-  { key: 'bar',  label: '▊ Bar' },
+  { key: 'bar',  label: '▊ Bar'  },
   { key: 'line', label: '∿ Line' },
   { key: 'area', label: '◈ Area' },
 ];
 
-/* ── Graph ───────────────────────────────────────────────────────────────── */
+/* ── Graph ──────────────────────────────────────────────────────────────── */
 const Graph = memo(({ data }) => {
   const [chartType, setChartType] = useState('bar');
 
   if (!data || data.length < 2) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400 py-10">
-        <div className="w-16 h-16 rounded-full bg-pink-50 flex items-center justify-center text-3xl">
+        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-pink-50 flex items-center justify-center text-2xl sm:text-3xl">
           📊
         </div>
-        <p className="text-sm font-medium text-gray-400">Log at least 2 cycles to see trends</p>
+        <p className="text-sm font-medium text-gray-400 text-center">Log at least 2 cycles to see trends</p>
       </div>
     );
   }
 
-  // ─── Aggregate by month ──────────────────────────────────────────────────────
-  // FIX: use periodDates array length when available for accuracy;
-  //      fall back to endDate diff only if needed
-  // ─── Aggregate by month accurately ─────────────────────────────────────────
-const chartData = Object.values(
-  data.reduce((acc, item) => {
-    // Expand periodDates into YYYY-MM-DD array
-    let dates;
-    if (item.periodDates?.length) {
-      dates = item.periodDates.map(d => new Date(d));
-    } else if (item.startDate && item.endDate) {
-      const start = new Date(item.startDate);
-      const end = new Date(item.endDate);
-      const length = Math.ceil((end - start + 1) / 86_400_000);
-      dates = Array.from({ length }, (_, i) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
-    } else if (item.startDate) {
-      dates = [new Date(item.startDate)];
-    } else {
-      dates = [];
-    }
+  // ─── Aggregate period days by month ────────────────────────────────────
+  const chartData = Object.values(
+    data.reduce((acc, item) => {
+      let dates;
+      if (item.periodDates?.length) {
+        dates = item.periodDates.map(d => new Date(d));
+      } else if (item.startDate && item.endDate) {
+        const start  = new Date(item.startDate);
+        const end    = new Date(item.endDate);
+        const length = Math.ceil((end - start + 1) / 86_400_000);
+        dates = Array.from({ length }, (_, i) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
+      } else if (item.startDate) {
+        dates = [new Date(item.startDate)];
+      } else {
+        dates = [];
+      }
 
-    // Count each date in its month
-    dates.forEach(d => {
-      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      if (!acc[monthKey]) acc[monthKey] = { month: monthKey, total: 0, count: 0 };
-      acc[monthKey].total += 1;   // each date counts as 1 day
-      acc[monthKey].count += 1;   // can be used if you want average per log
+      dates.forEach(d => {
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (!acc[monthKey]) acc[monthKey] = { month: monthKey, total: 0, count: 0 };
+        acc[monthKey].total += 1;
+        acc[monthKey].count += 1;
+      });
+
+      return acc;
+    }, {})
+  )
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .map(({ month, total }) => {
+      const d = new Date(month + '-01');
+      return {
+        name: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+        days: total,
+      };
     });
-
-    return acc;
-  }, {})
-)
-  .sort((a, b) => a.month.localeCompare(b.month))
-  .map(({ month, total, count }) => {
-    const d = new Date(month + '-01');
-    return {
-      name: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-      days: total, // total days per month
-    };
-  });
 
   const sharedProps = {
     data: chartData,
@@ -124,14 +119,15 @@ const chartData = Object.values(
   );
 
   return (
-    <div className="w-full h-full flex flex-col">
-      {/* Toggle */}
-      <div className="flex justify-end gap-1.5 mb-4 flex-shrink-0">
+    <div className="w-full h-full flex flex-col min-w-0">
+      {/* Chart type toggle */}
+      <div className="flex justify-end gap-1.5 mb-3 flex-shrink-0 flex-wrap">
         {CHART_TYPES.map(t => (
           <button
             key={t.key}
+            id={`chart-type-${t.key}`}
             onClick={() => setChartType(t.key)}
-            className={`px-3 py-1.5 rounded-xl text-[11px] font-bold tracking-wide transition-all ${
+            className={`px-2.5 py-1.5 min-h-[36px] rounded-xl text-[11px] font-bold tracking-wide transition-all ${
               chartType === t.key
                 ? 'bg-[#FF6B8A] text-white shadow-sm shadow-pink-200'
                 : 'bg-gray-50 text-gray-400 hover:bg-pink-50 hover:text-[#FF6B8A]'
@@ -142,7 +138,8 @@ const chartData = Object.values(
         ))}
       </div>
 
-      <div className="flex-1 w-full min-h-0">
+      {/* Chart — fills the given height from parent */}
+      <div className="flex-1 w-full min-h-0 min-w-0">
         <ResponsiveContainer width="100%" height="100%">
           {chartType === 'bar' ? (
             <BarChart {...sharedProps}>
@@ -157,7 +154,7 @@ const chartData = Object.values(
                 dataKey="days"
                 fill="url(#barGrad)"
                 radius={[8, 8, 0, 0]}
-                barSize={32}
+                barSize={28}
                 animationBegin={0}
                 animationDuration={1200}
               />

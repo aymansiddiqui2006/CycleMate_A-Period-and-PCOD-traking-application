@@ -5,13 +5,10 @@ import toast from 'react-hot-toast';
 import { useCycle } from '../context/CycleContext';
 import PeriodLogModal from './PeriodLogModal';
 
-// BUG FIX: previous toDateStr used `new Date(value)` which parses "YYYY-MM-DD"
-// as UTC midnight — causing a -5:30 IST shift and making every date appear as
-// the previous day. This version uses local date parts to avoid the shift.
+// BUG FIX: use local date parts to avoid UTC shift (IST -5:30 off-by-one)
 const toDateStr = (value) => {
   if (!value) return null;
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-  // For ISO strings / Date objects: extract LOCAL year/month/day
   const d = value instanceof Date ? value : new Date(value);
   if (isNaN(d.getTime())) return null;
   const yyyy = d.getFullYear();
@@ -20,9 +17,9 @@ const toDateStr = (value) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-// BUG FIX: parse "YYYY-MM-DD" as LOCAL date (not UTC) for all comparisons
+// BUG FIX: parse "YYYY-MM-DD" as LOCAL date (not UTC)
 const parseLocal = (dateStr) => {
-  const s = toDateStr(dateStr); // normalise first
+  const s = toDateStr(dateStr);
   if (!s) return new Date(NaN);
   const [y, m, d] = s.split('-').map(Number);
   return new Date(y, m - 1, d);
@@ -37,14 +34,12 @@ const Calendar = memo(() => {
 
   const { history, prediction, refreshData } = useCycle();
 
-  // ── Build Set of all period date strings ──────────────────────────────────
+  // ── Build Set of all period date strings ─────────────────────────────────
   const periodDateSet = new Set(
     history.flatMap(item => {
-      // Prefer periodDates array if available
       if (item.periodDates?.length) {
         return item.periodDates.map(toDateStr).filter(Boolean);
       }
-      // Fallback: reconstruct from startDate + length
       const startStr = toDateStr(item.startDate);
       if (!startStr) return [];
       const len   = item.length || 5;
@@ -57,7 +52,7 @@ const Calendar = memo(() => {
     })
   );
 
-  // ── Ovulation window (±2 days around ovulation date) ─────────────────────
+  // ── Ovulation window (±2 days around ovulation date) ────────────────────
   const ovulationWindowSet = new Set();
   let ovulationCoreDateStr = null;
   if (prediction?.ovulationDate) {
@@ -71,7 +66,7 @@ const Calendar = memo(() => {
     }
   }
 
-  // ── Predicted next period ─────────────────────────────────────────────────
+  // ── Predicted next period ─────────────────────────────────────────────
   let predictedDateStr = null;
 
   if (history.length >= 2) {
@@ -113,13 +108,11 @@ const Calendar = memo(() => {
 
   const todayStr = toDateStr(new Date());
 
-  // ── Navigation ──────────────────────────────────────────────────────────
-  const prevMonth = () =>
-    setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() - 1));
-  const nextMonth = () =>
-    setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + 1));
+  // ── Navigation ───────────────────────────────────────────────────────────
+  const prevMonth = () => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() - 1));
+  const nextMonth = () => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + 1));
 
-  // ── Date click ──────────────────────────────────────────────────────────
+  // ── Date click ───────────────────────────────────────────────────────────
   const handleDateClick = (day) => {
     const yyyy = currentDate.getFullYear();
     const mm   = String(currentDate.getMonth() + 1).padStart(2, '0');
@@ -135,7 +128,7 @@ const Calendar = memo(() => {
     setShowModal(true);
   };
 
-  // ── Classify each day ──────────────────────────────────────────────────
+  // ── Classify each day ───────────────────────────────────────────────────
   const getDayMeta = (day) => {
     const yyyy    = currentDate.getFullYear();
     const mm      = String(currentDate.getMonth() + 1).padStart(2, '0');
@@ -150,21 +143,12 @@ const Calendar = memo(() => {
     return { type: 'default', dateStr };
   };
 
-  const daysInMonth = new Date(
-    currentDate.getFullYear(), currentDate.getMonth() + 1, 0
-  ).getDate();
-  const firstDay = new Date(
-    currentDate.getFullYear(), currentDate.getMonth(), 1
-  ).getDay();
+  const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+  const firstDay    = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
 
-  const monthLabel = currentDate.toLocaleDateString('default', {
-    month: 'long', year: 'numeric',
-  });
+  const monthLabel  = currentDate.toLocaleDateString('default', { month: 'long', year: 'numeric' });
 
-  // ── Find the log entry that contains the selected date ─────────────────
-  // BUG FIX: all date comparisons now use parseLocal() to avoid UTC shift —
-  // previously `new Date(item.startDate)` caused off-by-one errors in IST,
-  // so `selectedLog` would come back null and `logId` would be undefined.
+  // ── Find the log entry that contains the selected date ──────────────────
   const selectedLog = selectedDate
     ? history.find(item => {
         if (item.periodDates?.length) {
@@ -181,19 +165,21 @@ const Calendar = memo(() => {
     : null;
 
   return (
-    <div className="w-full select-none font-[system-ui]">
+    <div className="w-full select-none">
       {/* ── Month Nav ── */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-4 sm:mb-5">
         <button
+          id="cal-prev-month"
           onClick={prevMonth}
-          className="w-8 h-8 rounded-full bg-pink-50 hover:bg-pink-100 flex items-center justify-center text-[#FF6B8A] transition-colors"
+          className="w-8 h-8 min-h-[44px] min-w-[44px] rounded-full bg-pink-50 hover:bg-pink-100 flex items-center justify-center text-[#FF6B8A] transition-colors"
         >
           <ChevronLeft size={16} strokeWidth={2.5} />
         </button>
         <span className="text-sm font-bold tracking-wide text-gray-800">{monthLabel}</span>
         <button
+          id="cal-next-month"
           onClick={nextMonth}
-          className="w-8 h-8 rounded-full bg-pink-50 hover:bg-pink-100 flex items-center justify-center text-[#FF6B8A] transition-colors"
+          className="w-8 h-8 min-h-[44px] min-w-[44px] rounded-full bg-pink-50 hover:bg-pink-100 flex items-center justify-center text-[#FF6B8A] transition-colors"
         >
           <ChevronRight size={16} strokeWidth={2.5} />
         </button>
@@ -217,7 +203,8 @@ const Calendar = memo(() => {
         {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
           const { type } = getDayMeta(day);
 
-          const base = 'mx-auto w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-150 active:scale-90 cursor-pointer relative';
+          // sm: h-10 w-10 (mobile) → lg: h-14 w-14 (desktop)
+          const base = 'mx-auto w-9 h-9 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium transition-all duration-150 active:scale-90 cursor-pointer relative';
 
           const variants = {
             period:    `${base} bg-[#FF6B8A] text-white shadow-sm shadow-pink-200`,
@@ -231,6 +218,7 @@ const Calendar = memo(() => {
           return (
             <button
               key={day}
+              id={`cal-day-${day}`}
               onClick={() => handleDateClick(day)}
               className={variants[type]}
             >
@@ -244,16 +232,16 @@ const Calendar = memo(() => {
       </div>
 
       {/* ── Legend ── */}
-      <div className="flex flex-wrap justify-center gap-3 mt-5 pt-4 border-t border-gray-100">
+      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-4 sm:mt-5 pt-4 border-t border-gray-100">
         {[
-          { color: 'bg-[#FF6B8A]',                          label: 'Period'         },
-          { color: 'bg-violet-500',                         label: 'Ovulation'      },
-          { color: 'bg-violet-50 ring-1 ring-violet-300',   label: 'Fertile window' },
-          { color: 'bg-pink-50 ring-2 ring-[#FF6B8A]',     label: 'Predicted'      },
-          { color: 'bg-gray-200',                           label: 'Today'          },
+          { color: 'bg-[#FF6B8A]',                        label: 'Period'         },
+          { color: 'bg-violet-500',                       label: 'Ovulation'      },
+          { color: 'bg-violet-50 ring-1 ring-violet-300', label: 'Fertile window' },
+          { color: 'bg-pink-50 ring-2 ring-[#FF6B8A]',   label: 'Predicted'      },
+          { color: 'bg-gray-200',                         label: 'Today'          },
         ].map(({ color, label }) => (
-          <span key={label} className="flex items-center gap-1.5 text-[11px] text-gray-400 font-medium">
-            <span className={`w-3 h-3 rounded-full inline-block flex-shrink-0 ${color}`} />
+          <span key={label} className="flex items-center gap-1 text-[10px] sm:text-[11px] text-gray-400 font-medium">
+            <span className={`w-2.5 h-2.5 rounded-full inline-block flex-shrink-0 ${color}`} />
             {label}
           </span>
         ))}

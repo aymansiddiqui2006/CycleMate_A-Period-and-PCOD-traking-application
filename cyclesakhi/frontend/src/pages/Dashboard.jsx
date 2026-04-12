@@ -11,7 +11,7 @@ import Onboarding from '../components/Onboarding';
 import NotificationCenter from '../components/NotificationCenter';
 import { DashboardSkeleton } from '../components/Skeleton';
 
-// ── Friendly label maps (match Onboarding.jsx ids) ─────────────────
+// ── Friendly label maps ────────────────────────────────────────────────────
 const SYMPTOM_LABELS = {
   cramps: '🤕 Cramps', bloating: '🫧 Bloating', mood_swings: '😢 Mood Swings',
   headaches: '🤯 Headaches', fatigue: '😴 Fatigue', acne: '🔴 Acne',
@@ -115,24 +115,24 @@ const Dashboard = () => {
   if (loading) return <DashboardSkeleton />;
 
   return (
-    <div className="relative min-h-full p-6 md:p-8 w-full overflow-x-hidden">
-      {/* BG orbs */}
-      <div className="fixed top-[-5%] right-[-5%] w-96 h-96 bg-[#FF6B8A]/15 rounded-full blur-[100px] pointer-events-none animate-float" />
-      <div className="fixed bottom-[-5%] left-0 w-[500px] h-[500px] bg-purple-300/15 rounded-full blur-[120px] pointer-events-none animate-float-delayed" />
+    <div className="relative min-h-full p-4 sm:p-6 md:p-8 w-full overflow-x-hidden">
+      {/* BG orbs — pointer-events-none so they don't block taps */}
+      <div className="fixed top-[-5%] right-[-5%] w-72 sm:w-96 h-72 sm:h-96 bg-[#FF6B8A]/15 rounded-full blur-[100px] pointer-events-none animate-float" />
+      <div className="fixed bottom-[-5%] left-0 w-72 sm:w-[500px] h-72 sm:h-[500px] bg-purple-300/15 rounded-full blur-[120px] pointer-events-none animate-float-delayed" />
 
-      {/* Onboarding */}
+      {/* Onboarding overlay */}
       <AnimatePresence>
         {showOnboarding && (
           <Onboarding onComplete={() => { setShowOnboarding(false); refreshData(); }} />
         )}
       </AnimatePresence>
 
-      <motion.div variants={containerVars} initial="hidden" animate="show" className="relative z-10 max-w-7xl mx-auto flex flex-col gap-6">
+      <motion.div variants={containerVars} initial="hidden" animate="show" className="relative z-10 max-w-7xl mx-auto flex flex-col gap-4 sm:gap-6">
 
         {/* ── Header ── */}
-        <motion.div variants={itemVars} className="flex flex-wrap items-center justify-between gap-4">
+        <motion.div variants={itemVars} className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800">
+            <h1 className="text-xl sm:text-3xl md:text-4xl font-extrabold text-gray-800">
               {t('welcome')}, <span className="text-[#FF6B8A]">{user.name?.split(' ')[0] || '🌸'}</span>
             </h1>
             <div className="flex items-center gap-2 mt-1 text-gray-400 text-sm font-medium">
@@ -143,23 +143,24 @@ const Dashboard = () => {
           <div className="flex items-center gap-3">
             <NotificationCenter />
             <button
+              id="dashboard-download-report"
               onClick={downloadReport}
-              className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-[#FF6B8A] to-pink-400 text-white font-semibold px-5 py-2.5 rounded-full shadow-md hover:shadow-lg hover:shadow-pink-200 transition-all text-sm active:scale-95"
+              className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-[#FF6B8A] to-pink-400 text-white font-semibold px-5 py-2.5 min-h-[44px] rounded-full shadow-md hover:shadow-lg hover:shadow-pink-200 transition-all text-sm active:scale-95"
             >
               <Download size={16} /> {t('download_pdf')}
             </button>
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
 
           {/* ── AI Alert card ── */}
           <motion.div
             variants={itemVars}
             whileHover={{ y: -4 }}
-            className="lg:col-span-4 bg-white/70 backdrop-blur-xl border border-white/80 rounded-3xl p-7 shadow-[0_4px_20px_rgba(255,107,138,0.1)] flex flex-col justify-between relative overflow-hidden"
+            className="lg:col-span-4 bg-white/70 backdrop-blur-xl border border-white/80 rounded-3xl p-5 sm:p-7 shadow-[0_4px_20px_rgba(255,107,138,0.1)] flex flex-col justify-between relative overflow-hidden"
           >
-            {/* Glow side bar */}
+            {/* Glow sidebar */}
             <div
               className="absolute left-0 top-0 w-1.5 h-full rounded-r-full"
               style={{ background: riskColor, boxShadow: `0 0 14px ${riskColor}` }}
@@ -175,13 +176,13 @@ const Dashboard = () => {
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${riskData.level === 'high' ? 'bg-red-50' : 'bg-pink-50'}`}>
                 <AlertCircle style={{ color: riskColor }} size={26} />
               </div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2">{t('ai_alert')}</h3>
+              <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-2">{t('ai_alert')}</h3>
               <p className="text-gray-600 leading-relaxed text-sm">
                 {riskData.level === 'high' ? t('high_risk_msg') : riskData.level === 'moderate' ? t('moderate_risk_msg') : t('normal_msg')}
               </p>
             </div>
 
-            {/* PCOD risk animated bar */}
+            {/* PCOD risk bar */}
             <div className="mt-5">
               <div className="flex justify-between text-xs text-gray-400 mb-1.5">
                 <span>PCOD Risk</span>
@@ -200,9 +201,9 @@ const Dashboard = () => {
           <motion.div
             variants={itemVars}
             whileHover={{ y: -4 }}
-            className="lg:col-span-8 bg-white/70 backdrop-blur-xl border border-white/80 rounded-3xl p-6 shadow-[0_4px_20px_rgba(255,107,138,0.08)]"
+            className="lg:col-span-8 bg-white/70 backdrop-blur-xl border border-white/80 rounded-3xl p-4 sm:p-6 shadow-[0_4px_20px_rgba(255,107,138,0.08)]"
           >
-            <h3 className="text-lg font-bold text-gray-800 mb-4">{t('tracking_calendar')}</h3>
+            <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4">{t('tracking_calendar')}</h3>
             <CalendarComponent />
           </motion.div>
 
@@ -210,21 +211,20 @@ const Dashboard = () => {
           <motion.div
             variants={itemVars}
             whileHover={{ y: -4 }}
-            className="lg:col-span-4 bg-white/70 backdrop-blur-xl border border-white/80 rounded-3xl p-7 shadow-[0_4px_20px_rgba(255,107,138,0.08)] flex flex-col gap-5"
+            className="lg:col-span-4 bg-white/70 backdrop-blur-xl border border-white/80 rounded-3xl p-5 sm:p-7 shadow-[0_4px_20px_rgba(255,107,138,0.08)] flex flex-col gap-5"
           >
             {history.length === 0 ? (
-              /* Show onboarding defaults when no logged cycles yet */
               <div className="flex flex-col gap-4">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t('cycle_stats')}</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-[#FF6B8A] to-purple-500">
+                  <span className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-[#FF6B8A] to-purple-500">
                     {userProfile?.cycleLength || 28}
                   </span>
-                  <span className="text-base text-gray-400 font-medium">days (your setting)</span>
+                  <span className="text-sm text-gray-400 font-medium">days (your setting)</span>
                 </div>
                 <div className="bg-pink-50 rounded-2xl p-4 border border-pink-100">
                   <p className="text-xs text-gray-500 font-medium">Period Duration</p>
-                  <p className="text-2xl font-bold text-[#FF6B8A]">{userProfile?.periodDuration || 5} <span className="text-sm font-medium text-gray-400">days</span></p>
+                  <p className="text-xl sm:text-2xl font-bold text-[#FF6B8A]">{userProfile?.periodDuration || 5} <span className="text-sm font-medium text-gray-400">days</span></p>
                 </div>
                 <p className="text-xs text-gray-400 text-center">Log your first period on the Calendar to start tracking real stats.</p>
               </div>
@@ -233,10 +233,10 @@ const Dashboard = () => {
                 <div>
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{t('cycle_stats')}</p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-[#FF6B8A] to-purple-500">
+                    <span className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-[#FF6B8A] to-purple-500">
                       <AnimatedCounter value={Math.round(riskData.averageGap)} />
                     </span>
-                    <span className="text-base text-gray-400 font-medium">{t('days_avg')}</span>
+                    <span className="text-sm text-gray-400 font-medium">{t('days_avg')}</span>
                   </div>
                 </div>
 
@@ -246,7 +246,7 @@ const Dashboard = () => {
                     {streak > 7 ? '🔥' : streak > 3 ? '⭐' : '🌱'}
                   </span>
                   <div>
-                    <p className="font-bold text-gray-800">{streak} {t('streak_msg')}</p>
+                    <p className="font-bold text-gray-800 text-sm sm:text-base">{streak} {t('streak_msg')}</p>
                     <p className="text-xs text-gray-500">
                       {streak > 7 ? 'Amazing dedication! 💪' : streak > 3 ? 'Great consistency! 🌸' : 'Keep logging every cycle!'}
                     </p>
@@ -260,32 +260,34 @@ const Dashboard = () => {
           <motion.div
             variants={itemVars}
             whileHover={{ y: -4 }}
-            className="lg:col-span-8 bg-white/70 backdrop-blur-xl border border-white/80 rounded-3xl p-6 shadow-[0_4px_20px_rgba(255,107,138,0.08)] flex flex-col"
-            style={{ minHeight: 320 }}
+            className="lg:col-span-8 bg-white/70 backdrop-blur-xl border border-white/80 rounded-3xl p-4 sm:p-6 shadow-[0_4px_20px_rgba(255,107,138,0.08)] flex flex-col"
           >
-            <h3 className="text-lg font-bold text-gray-800 mb-4">{t('trends')}</h3>
-            <div className="flex-1 w-full">
-              {history.length < 2 ? (
-                <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400">
-                  <div className="text-4xl">📊</div>
-                  <p className="text-sm text-center">Log at least 2 cycles on the Calendar to see trends here.</p>
-                </div>
-              ) : (
-                <Graph data={history} />
-              )}
+            <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4">{t('trends')}</h3>
+            <div className="w-full overflow-x-auto min-w-0">
+              <div className="h-48 sm:h-64 lg:h-80 w-full min-w-0">
+                {history.length < 2 ? (
+                  <div className="flex flex-col items-center justify-center h-full gap-3 text-gray-400">
+                    <div className="text-4xl">📊</div>
+                    <p className="text-sm text-center">Log at least 2 cycles on the Calendar to see trends here.</p>
+                  </div>
+                ) : (
+                  <Graph data={history} />
+                )}
+              </div>
             </div>
           </motion.div>
 
-          {/* ── Health Profile card (from onboarding) ── */}
+          {/* ── Health Profile ── */}
           {userProfile?.isOnboarded && (
             <motion.div
               variants={itemVars}
               whileHover={{ y: -4 }}
-              className="lg:col-span-12 bg-white/70 backdrop-blur-xl border border-white/80 rounded-3xl p-7 shadow-[0_4px_20px_rgba(255,107,138,0.08)]"
+              className="lg:col-span-12 bg-white/70 backdrop-blur-xl border border-white/80 rounded-3xl p-5 sm:p-7 shadow-[0_4px_20px_rgba(255,107,138,0.08)]"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-gray-800">Your Health Profile</h3>
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-base sm:text-lg font-bold text-gray-800">Your Health Profile</h3>
                 <button
+                  id="edit-health-profile"
                   onClick={() => navigate('/onboarding')}
                   className="text-xs text-[#FF6B8A] font-semibold hover:underline"
                 >
@@ -293,54 +295,50 @@ const Dashboard = () => {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                {/* Cycle Length */}
-                <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl p-4 border border-pink-100">
+              {/* Stat mini-cards: grid-1-2-3 pattern */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-5">
+                <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl p-3 sm:p-4 border border-pink-100">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-xl bg-pink-100 flex items-center justify-center">
-                      <Calendar size={16} className="text-[#FF6B8A]" />
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-pink-100 flex items-center justify-center">
+                      <Calendar size={14} className="text-[#FF6B8A]" />
                     </div>
                     <p className="text-xs font-semibold text-gray-500">Cycle Length</p>
                   </div>
-                  <p className="text-3xl font-black text-[#FF6B8A]">{userProfile.cycleLength}<span className="text-sm font-medium text-gray-400 ml-1">days</span></p>
+                  <p className="text-2xl sm:text-3xl font-black text-[#FF6B8A]">{userProfile.cycleLength}<span className="text-xs font-medium text-gray-400 ml-1">days</span></p>
                 </div>
 
-                {/* Period Duration */}
-                <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-4 border border-purple-100">
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-3 sm:p-4 border border-purple-100">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center">
-                      <Activity size={16} className="text-purple-500" />
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-purple-100 flex items-center justify-center">
+                      <Activity size={14} className="text-purple-500" />
                     </div>
                     <p className="text-xs font-semibold text-gray-500">Period Duration</p>
                   </div>
-                  <p className="text-3xl font-black text-purple-500">{userProfile.periodDuration}<span className="text-sm font-medium text-gray-400 ml-1">days</span></p>
+                  <p className="text-2xl sm:text-3xl font-black text-purple-500">{userProfile.periodDuration}<span className="text-xs font-medium text-gray-400 ml-1">days</span></p>
                 </div>
 
-                {/* Symptoms count */}
-                <div className="bg-gradient-to-br from-orange-50 to-pink-50 rounded-2xl p-4 border border-orange-100">
+                <div className="bg-gradient-to-br from-orange-50 to-pink-50 rounded-2xl p-3 sm:p-4 border border-orange-100">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center">
-                      <Zap size={16} className="text-orange-400" />
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-orange-100 flex items-center justify-center">
+                      <Zap size={14} className="text-orange-400" />
                     </div>
                     <p className="text-xs font-semibold text-gray-500">Tracked Symptoms</p>
                   </div>
-                  <p className="text-3xl font-black text-orange-400">{userProfile.symptoms?.length || 0}<span className="text-sm font-medium text-gray-400 ml-1">types</span></p>
+                  <p className="text-2xl sm:text-3xl font-black text-orange-400">{userProfile.symptoms?.length || 0}<span className="text-xs font-medium text-gray-400 ml-1">types</span></p>
                 </div>
 
-                {/* Goals count */}
-                <div className="bg-gradient-to-br from-green-50 to-teal-50 rounded-2xl p-4 border border-green-100">
+                <div className="bg-gradient-to-br from-green-50 to-teal-50 rounded-2xl p-3 sm:p-4 border border-green-100">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-xl bg-green-100 flex items-center justify-center">
-                      <Target size={16} className="text-green-500" />
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-green-100 flex items-center justify-center">
+                      <Target size={14} className="text-green-500" />
                     </div>
                     <p className="text-xs font-semibold text-gray-500">Health Goals</p>
                   </div>
-                  <p className="text-3xl font-black text-green-500">{userProfile.healthGoals?.length || 0}<span className="text-sm font-medium text-gray-400 ml-1">set</span></p>
+                  <p className="text-2xl sm:text-3xl font-black text-green-500">{userProfile.healthGoals?.length || 0}<span className="text-xs font-medium text-gray-400 ml-1">set</span></p>
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-5">
-                {/* Symptoms */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                 {userProfile.symptoms?.length > 0 && (
                   <div>
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Symptoms You Track</p>
@@ -354,7 +352,6 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {/* Goals */}
                 {userProfile.healthGoals?.length > 0 && (
                   <div>
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Your Health Goals</p>

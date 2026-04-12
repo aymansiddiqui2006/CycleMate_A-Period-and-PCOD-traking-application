@@ -6,7 +6,7 @@ import { useCycle } from '../context/CycleContext';
 import { useLanguage } from '../context/LanguageContext';
 import Graph from '../components/Graph';
 
-/* ── Animated counter (same pattern as Dashboard) ── */
+/* ── Animated counter ── */
 const AnimatedCounter = ({ value }) => {
   const [count, setCount] = useState(0);
   useEffect(() => {
@@ -25,7 +25,6 @@ const AnimatedCounter = ({ value }) => {
 
 const Report = () => {
   const { t } = useLanguage();
-  // ✅ All data from shared CycleContext — no duplicate API calls
   const { history, riskData, loading } = useCycle();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -37,7 +36,6 @@ const Report = () => {
     const W = doc.internal.pageSize.getWidth();
     const H = doc.internal.pageSize.getHeight();
 
-    // ── Header band
     doc.setFillColor(255, 107, 138);
     doc.rect(0, 0, W, 45, 'F');
     doc.setTextColor(255, 255, 255);
@@ -52,19 +50,16 @@ const Report = () => {
       W - 20, 33, { align: 'right' }
     );
 
-    // ── Patient info
     doc.setTextColor(60, 60, 60);
     doc.setFontSize(12);
     doc.text(`Patient Name: ${user.name || 'N/A'}`, 20, 60);
     doc.text(`Age: ${user.age || 'N/A'} years`, 20, 70);
     doc.text(`Email: ${user.email || 'N/A'}`, 20, 80);
 
-    // ── Divider
     doc.setDrawColor(255, 107, 138);
     doc.setLineWidth(0.5);
     doc.line(20, 90, W - 20, 90);
 
-    // ── Risk assessment
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(15);
     doc.setTextColor(40, 40, 40);
@@ -79,7 +74,6 @@ const Report = () => {
     doc.text(`Average Cycle Length: ${Math.round(riskData.averageGap) || 'N/A'} days`, 20, 128);
     doc.text(`Total Cycles Logged: ${history.length}`, 20, 140);
 
-    // ── Cycle history table (last 5)
     doc.line(20, 150, W - 20, 150);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
@@ -96,7 +90,6 @@ const Report = () => {
       );
     });
 
-    // ── Recommendations
     const recY = 176 + last5.length * 12 + 14;
     doc.line(20, recY, W - 20, recY);
     doc.setFont('helvetica', 'bold');
@@ -115,7 +108,6 @@ const Report = () => {
     doc.setTextColor(60, 60, 60);
     doc.text(lines, 20, recY + 26);
 
-    // ── Footer
     doc.setTextColor(170, 170, 170);
     doc.setFontSize(9);
     doc.text('AI-generated report — not a medical diagnosis. CycleSakhi © 2025 🌸', 20, H - 12);
@@ -125,7 +117,7 @@ const Report = () => {
 
   if (loading) {
     return (
-      <div className="p-8 flex flex-col gap-6 max-w-6xl mx-auto">
+      <div className="p-4 sm:p-8 flex flex-col gap-6 max-w-6xl mx-auto">
         {[1, 2, 3].map(i => (
           <div key={i} className="h-40 bg-gray-100 rounded-3xl animate-pulse" />
         ))}
@@ -139,7 +131,7 @@ const Report = () => {
   };
 
   return (
-    <div className="p-6 md:p-8 min-h-full relative">
+    <div className="p-4 sm:p-6 md:p-8 min-h-full relative">
       {/* BG orb */}
       <div className="fixed top-0 right-0 w-80 h-80 bg-purple-300/15 rounded-full blur-[100px] pointer-events-none" />
 
@@ -149,32 +141,33 @@ const Report = () => {
         <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-wrap items-start justify-between gap-4 mb-8"
+          className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6 sm:mb-8"
         >
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-800 mb-1">{t('report_title')}</h1>
+            <h1 className="text-xl sm:text-3xl font-extrabold text-gray-800 mb-1">{t('report_title')}</h1>
             <p className="text-gray-500 text-sm">Comprehensive analysis and PCOD risk assessment.</p>
           </div>
           <button
+            id="report-export-pdf"
             onClick={downloadPDF}
-            className="flex items-center gap-2 bg-gradient-to-r from-[#FF6B8A] to-pink-400 text-white font-semibold px-6 py-3 rounded-full shadow-md hover:shadow-lg hover:shadow-pink-200 transition-all active:scale-95"
+            className="btn-primary"
           >
-            <Download size={18} /> {t('export_pdf')}
+            <Download size={18} className="mr-2" /> {t('export_pdf')}
           </button>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6">
 
-          {/* ── Risk gauge ───────────────────────────────── */}
+          {/* ── Risk gauge ── */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.15 }}
-            className="md:col-span-4 bg-white/80 backdrop-blur-xl border border-white/80 rounded-3xl p-8 shadow-[0_4px_20px_rgba(255,107,138,0.08)] flex flex-col items-center gap-5"
+            className="md:col-span-4 bg-white/80 backdrop-blur-xl border border-white/80 rounded-3xl p-5 sm:p-8 shadow-[0_4px_20px_rgba(255,107,138,0.08)] flex flex-col items-center gap-5"
           >
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest self-start">PCOD Risk Score</h3>
 
-            <div className="relative w-44 h-44 flex items-center justify-center">
+            <div className="relative w-36 sm:w-44 h-36 sm:h-44 flex items-center justify-center">
               <svg className="w-full h-full -rotate-90 drop-shadow-md">
                 <circle cx="88" cy="88" r="76" fill="none" stroke="#f3f4f6" strokeWidth="14" />
                 <circle
@@ -190,7 +183,7 @@ const Report = () => {
                 />
               </svg>
               <div className="absolute flex flex-col items-center">
-                <span className="text-5xl font-black" style={{ color: riskColor }}>
+                <span className="text-4xl sm:text-5xl font-black" style={{ color: riskColor }}>
                   <AnimatedCounter value={Math.round(riskData.riskScore)} />%
                 </span>
                 <span className="text-sm font-bold uppercase mt-1" style={{ color: riskColor }}>
@@ -208,7 +201,7 @@ const Report = () => {
               ].map(item => (
                 <div key={item.label} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full" style={{ background: item.color }} />
+                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: item.color }} />
                     <span className="text-gray-600">{item.label}</span>
                   </div>
                   <span className="text-gray-400 font-mono text-xs">{item.range}</span>
@@ -217,36 +210,36 @@ const Report = () => {
             </div>
           </motion.div>
 
-          {/* ── Analysis summary ─────────────────────────── */}
+          {/* ── Analysis summary ── */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
-            className="md:col-span-8 bg-white/80 backdrop-blur-xl border border-white/80 rounded-3xl p-8 shadow-[0_4px_20px_rgba(255,107,138,0.08)] flex flex-col gap-5"
+            className="md:col-span-8 bg-white/80 backdrop-blur-xl border border-white/80 rounded-3xl p-5 sm:p-8 shadow-[0_4px_20px_rgba(255,107,138,0.08)] flex flex-col gap-5"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-pink-50 rounded-xl flex items-center justify-center">
                 <FileText className="text-[#FF6B8A]" size={20} />
               </div>
-              <h3 className="text-lg font-bold text-gray-800">{t('ai_alert')}</h3>
+              <h3 className="text-base sm:text-lg font-bold text-gray-800">{t('ai_alert')}</h3>
             </div>
 
-            {/* Stat chips */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Stat chips — responsive grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
-                { label: 'Avg Cycle Length',  value: `${Math.round(riskData.averageGap) || '--'} days`, icon: TrendingUp },
-                { label: 'Cycles Logged',     value: `${history.length}`,                               icon: Activity },
+                { label: 'Avg Cycle Length', value: `${Math.round(riskData.averageGap) || '--'} days`, icon: TrendingUp },
+                { label: 'Cycles Logged',    value: `${history.length}`,                               icon: Activity },
               ].map(stat => (
-                <div key={stat.label} className="bg-gradient-to-br from-pink-50 to-purple-50/50 rounded-2xl p-5 border border-pink-100">
+                <div key={stat.label} className="bg-gradient-to-br from-pink-50 to-purple-50/50 rounded-2xl p-4 sm:p-5 border border-pink-100">
                   <stat.icon className="text-[#FF6B8A] mb-2" size={20} />
-                  <p className="text-2xl font-black text-gray-800">{stat.value}</p>
+                  <p className="text-xl sm:text-2xl font-black text-gray-800">{stat.value}</p>
                   <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
                 </div>
               ))}
             </div>
 
             {/* Recommendation */}
-            <div className="bg-gradient-to-br from-pink-50/80 to-purple-50/60 rounded-2xl p-5 border border-pink-100">
+            <div className="bg-gradient-to-br from-pink-50/80 to-purple-50/60 rounded-2xl p-4 sm:p-5 border border-pink-100">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Our Recommendation</p>
               <p className="text-gray-700 leading-relaxed text-sm">
                 {riskData.level === 'high'
@@ -258,17 +251,18 @@ const Report = () => {
             </div>
           </motion.div>
 
-          {/* ── Yearly Chart ─────────────────────────────── */}
+          {/* ── Yearly Chart ── */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="md:col-span-12 bg-white/80 backdrop-blur-xl border border-white/80 rounded-3xl p-6 shadow-[0_4px_20px_rgba(255,107,138,0.08)]"
-            style={{ minHeight: 360 }}
+            className="md:col-span-12 bg-white/80 backdrop-blur-xl border border-white/80 rounded-3xl p-4 sm:p-6 shadow-[0_4px_20px_rgba(255,107,138,0.08)]"
           >
-            <h3 className="text-lg font-bold text-gray-800 mb-6">Yearly Cycle Overview</h3>
-            <div style={{ height: 280 }}>
-              <Graph data={history} />
+            <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-4 sm:mb-6">Yearly Cycle Overview</h3>
+            <div className="w-full overflow-x-auto min-w-0">
+              <div className="h-48 sm:h-64 lg:h-80 w-full min-w-0">
+                <Graph data={history} />
+              </div>
             </div>
           </motion.div>
 

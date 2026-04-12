@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { Loader2, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
 
-// ─── Static data ──────────────────────────────────────────────────────────────
+// ─── Static data ────────────────────────────────────────────────────────────
 const SYMPTOMS = [
   { id: 'cramps',       label: '🤕 Cramps' },
   { id: 'bloating',     label: '🫧 Bloating' },
@@ -36,19 +36,19 @@ const STEPS = [
   { title: 'Health Goals',         subtitle: 'What would you like to achieve?' },
 ];
 
-// ─── Slide variants ────────────────────────────────────────────────────────────
+// ─── Slide variants ──────────────────────────────────────────────────────────
 const slideVariants = {
   enter: (dir) => ({ x: dir > 0 ? 60 : -60, opacity: 0 }),
   center:       { x: 0, opacity: 1 },
   exit:  (dir) => ({ x: dir > 0 ? -60 : 60, opacity: 0 }),
 };
 
-// ─── Chip (multi-select) ───────────────────────────────────────────────────────
+// ─── Chip (multi-select) ─────────────────────────────────────────────────────
 const Chip = ({ label, selected, onClick }) => (
   <button
     type="button"
     onClick={onClick}
-    className={`px-4 py-2 rounded-full text-sm font-medium border transition-all duration-200 cursor-pointer select-none
+    className={`px-4 py-2.5 min-h-[44px] rounded-full text-sm font-medium border transition-all duration-200 cursor-pointer select-none
       ${selected
         ? 'bg-gradient-to-r from-[#FF6B8A] to-purple-500 text-white border-transparent shadow-md scale-[1.04]'
         : 'bg-white/60 text-gray-600 border-gray-200 hover:border-pink-300 hover:bg-pink-50'
@@ -58,7 +58,7 @@ const Chip = ({ label, selected, onClick }) => (
   </button>
 );
 
-// ─── Main component ────────────────────────────────────────────────────────────
+// ─── Main component ──────────────────────────────────────────────────────────
 const Onboarding = () => {
   const navigate = useNavigate();
   const [step, setStep]       = useState(0);
@@ -73,7 +73,6 @@ const Onboarding = () => {
     healthGoals:    [],
   });
 
-  // ── helpers ───────────────────────────────────────────────────────────────
   const toggleArray = (field, id) =>
     setFormData((prev) => ({
       ...prev,
@@ -89,17 +88,16 @@ const Onboarding = () => {
     if (step === 0) return !!formData.lastPeriodDate;
     if (step === 1) return formData.cycleLength >= 15 && formData.cycleLength <= 60;
     if (step === 2) return formData.periodDuration >= 1 && formData.periodDuration <= 15;
-    return true; // steps 3 & 4 are optional
+    return true;
   };
 
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const { data } = await api.post('/user/onboarding', formData);
-      // Update cached user so router guard sees isOnboarded: true
+      await api.post('/user/onboarding', formData);
       const cached = JSON.parse(localStorage.getItem('user') || '{}');
       localStorage.setItem('user', JSON.stringify({ ...cached, isOnboarded: true }));
-      toast.success('You\'re all set! Welcome to CycleSakhi 🌸');
+      toast.success("You're all set! Welcome to CycleSakhi 🌸");
       navigate('/dashboard');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not save. Please try again.');
@@ -108,13 +106,13 @@ const Onboarding = () => {
     }
   };
 
-  // ── step panels ───────────────────────────────────────────────────────────
   const renderStep = () => {
     switch (step) {
       case 0:
         return (
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-4 w-full">
             <input
+              id="onb-last-period-date"
               type="date"
               max={new Date().toISOString().split('T')[0]}
               value={formData.lastPeriodDate}
@@ -146,7 +144,7 @@ const Onboarding = () => {
 
       case 3:
         return (
-          <div className="flex flex-wrap justify-center gap-2 max-w-md">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full max-w-md">
             {SYMPTOMS.map((s) => (
               <Chip
                 key={s.id}
@@ -160,7 +158,7 @@ const Onboarding = () => {
 
       case 4:
         return (
-          <div className="flex flex-wrap justify-center gap-2 max-w-md">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full max-w-md">
             {HEALTH_GOALS.map((g) => (
               <Chip
                 key={g.id}
@@ -177,31 +175,30 @@ const Onboarding = () => {
     }
   };
 
-  // ── render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-pink-50 via-white to-purple-50 relative overflow-hidden px-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-pink-50 via-white to-purple-50 relative overflow-hidden px-4 py-8">
       {/* Background orbs */}
-      <div className="absolute top-[-15%] left-[-10%] w-[500px] h-[500px] bg-gradient-to-tr from-pink-400 to-[#FF6B8A] rounded-full mix-blend-multiply filter blur-[80px] opacity-50 animate-float" />
-      <div className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] bg-gradient-to-tl from-purple-300 to-pink-300 rounded-full mix-blend-multiply filter blur-[100px] opacity-40 animate-float-delayed" />
+      <div className="absolute top-[-15%] left-[-10%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-gradient-to-tr from-pink-400 to-[#FF6B8A] rounded-full mix-blend-multiply filter blur-[80px] opacity-50 animate-float pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-5%] w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-gradient-to-tl from-purple-300 to-pink-300 rounded-full mix-blend-multiply filter blur-[100px] opacity-40 animate-float-delayed pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.96 }}
         animate={{ opacity: 1, y: 0,  scale: 1 }}
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-xl"
+        className="w-full max-w-lg relative z-10"
       >
         {/* Card */}
-        <div className="glass-card rounded-3xl p-8 md:p-12 shadow-2xl">
+        <div className="glass-card rounded-3xl p-6 sm:p-8 md:p-10 shadow-2xl">
 
           {/* Header */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <span className="text-5xl mb-4 block">🌸</span>
-            <h1 className="text-3xl font-extrabold text-gray-800 mb-1">Let's personalise your experience</h1>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-800 mb-1">Let's personalise your experience</h1>
             <p className="text-gray-500 text-sm">Step {step + 1} of {STEPS.length} — {STEPS[step].subtitle}</p>
           </div>
 
           {/* Progress bar */}
-          <div className="w-full bg-pink-100 rounded-full h-2 mb-8 overflow-hidden">
+          <div className="w-full bg-pink-100 rounded-full h-2 mb-6 overflow-hidden">
             <motion.div
               className="h-2 rounded-full bg-gradient-to-r from-[#FF6B8A] to-purple-500"
               animate={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
@@ -210,7 +207,7 @@ const Onboarding = () => {
           </div>
 
           {/* Step dots */}
-          <div className="flex justify-center gap-2 mb-8">
+          <div className="flex justify-center gap-2 mb-6">
             {STEPS.map((_, i) => (
               <div
                 key={i}
@@ -220,7 +217,7 @@ const Onboarding = () => {
             ))}
           </div>
 
-          {/* Step title */}
+          {/* Step content */}
           <AnimatePresence mode="wait" custom={dir}>
             <motion.div
               key={step}
@@ -232,37 +229,40 @@ const Onboarding = () => {
               transition={{ duration: 0.35, ease: 'easeInOut' }}
               className="flex flex-col items-center gap-6 min-h-[180px] justify-center"
             >
-              <h2 className="text-xl font-bold text-gray-700">{STEPS[step].title}</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-700">{STEPS[step].title}</h2>
               {renderStep()}
             </motion.div>
           </AnimatePresence>
 
           {/* Navigation */}
-          <div className="flex justify-between items-center mt-10 gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-8 gap-3">
             <button
+              id="onb-back"
               type="button"
               onClick={goPrev}
               disabled={step === 0}
-              className="flex items-center gap-1 px-5 py-2.5 rounded-xl border border-gray-200 text-gray-500 font-medium hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+              className="flex items-center gap-1 px-5 py-3 min-h-[48px] rounded-xl border border-gray-200 text-gray-500 font-medium hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all w-full sm:w-auto justify-center"
             >
               <ChevronLeft className="w-4 h-4" /> Back
             </button>
 
             {step < STEPS.length - 1 ? (
               <button
+                id="onb-continue"
                 type="button"
                 onClick={goNext}
                 disabled={!canProceed()}
-                className="flex items-center gap-1 px-8 py-2.5 rounded-xl bg-gradient-to-r from-[#FF6B8A] to-purple-500 text-white font-semibold shadow-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                className="flex items-center gap-1 px-8 py-3 min-h-[48px] rounded-xl bg-gradient-to-r from-[#FF6B8A] to-purple-500 text-white font-semibold shadow-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all w-full sm:w-auto justify-center"
               >
                 Continue <ChevronRight className="w-4 h-4" />
               </button>
             ) : (
               <button
+                id="onb-finish"
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading}
-                className="flex items-center gap-2 px-8 py-2.5 rounded-xl bg-gradient-to-r from-[#FF6B8A] to-purple-500 text-white font-semibold shadow-md hover:opacity-90 disabled:opacity-60 transition-all"
+                className="flex items-center gap-2 px-8 py-3 min-h-[48px] rounded-xl bg-gradient-to-r from-[#FF6B8A] to-purple-500 text-white font-semibold shadow-md hover:opacity-90 disabled:opacity-60 transition-all w-full sm:w-auto justify-center"
               >
                 {loading
                   ? <Loader2 className="animate-spin w-5 h-5" />
@@ -273,9 +273,10 @@ const Onboarding = () => {
           </div>
 
           {/* Skip link */}
-          <p className="text-center mt-5 text-xs text-gray-400">
+          <p className="text-center mt-5 text-sm text-gray-400">
             You can update these anytime in your profile.{' '}
             <button
+              id="onb-skip"
               type="button"
               onClick={() => navigate('/dashboard')}
               className="text-pink-400 hover:underline font-medium"
@@ -292,8 +293,8 @@ const Onboarding = () => {
 // ─── Reusable slider + number input component ─────────────────────────────────
 const SliderStep = ({ value, min, max, unit, onChange, colorClass }) => (
   <div className="flex flex-col items-center gap-4 w-full max-w-xs">
-    <div className={`text-5xl font-extrabold bg-gradient-to-r ${colorClass} bg-clip-text text-transparent`}>
-      {value} <span className="text-2xl font-semibold">{unit}</span>
+    <div className={`text-4xl sm:text-5xl font-extrabold bg-gradient-to-r ${colorClass} bg-clip-text text-transparent`}>
+      {value} <span className="text-xl sm:text-2xl font-semibold">{unit}</span>
     </div>
     <input
       type="range"
@@ -311,7 +312,7 @@ const SliderStep = ({ value, min, max, unit, onChange, colorClass }) => (
       <button
         type="button"
         onClick={() => onChange(Math.max(min, value - 1))}
-        className="w-8 h-8 rounded-full border border-gray-200 text-gray-500 hover:bg-pink-50 font-bold flex items-center justify-center transition"
+        className="w-10 h-10 min-h-[44px] rounded-full border border-gray-200 text-gray-500 hover:bg-pink-50 font-bold flex items-center justify-center transition"
       >−</button>
       <input
         type="number"
@@ -324,7 +325,7 @@ const SliderStep = ({ value, min, max, unit, onChange, colorClass }) => (
       <button
         type="button"
         onClick={() => onChange(Math.min(max, value + 1))}
-        className="w-8 h-8 rounded-full border border-gray-200 text-gray-500 hover:bg-pink-50 font-bold flex items-center justify-center transition"
+        className="w-10 h-10 min-h-[44px] rounded-full border border-gray-200 text-gray-500 hover:bg-pink-50 font-bold flex items-center justify-center transition"
       >+</button>
     </div>
   </div>
