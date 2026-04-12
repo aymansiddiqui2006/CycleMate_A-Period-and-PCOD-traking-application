@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import cycleRoutes from './routes/cycle.js';
 import reportRoutes from './routes/report.js';
+import userRoutes from './routes/user.js';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/cycle', cycleRoutes);
 app.use('/api/report', reportRoutes);
+app.use('/api/user', userRoutes);
 
 // Health check route
 app.get('/', (req, res) => {

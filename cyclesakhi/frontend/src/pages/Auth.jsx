@@ -35,7 +35,13 @@ const Auth = () => {
       localStorage.setItem('user', JSON.stringify(data.user));
       
       toast.success(isLogin ? 'Successfully logged in! 🌸' : 'Welcome to CycleSakhi! 🌸');
-      navigate('/dashboard');
+      if (isLogin) {
+        navigate('/dashboard');
+      } else if (data.isNewUser) {
+        navigate('/onboarding');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Authentication failed');
     } finally {

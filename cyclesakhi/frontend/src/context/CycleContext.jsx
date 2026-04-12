@@ -4,8 +4,9 @@ import api from '../api/axios';
 const CycleContext = createContext();
 
 export const CycleProvider = ({ children }) => {
-  const [history, setHistory] = useState([]);
-  const [riskData, setRiskData] = useState({
+  const [history, setHistory]       = useState([]);
+  const [userProfile, setUserProfile] = useState(null);
+  const [riskData, setRiskData]     = useState({
     riskScore: 0,
     level: 'normal',
     averageGap: 0,
@@ -23,14 +24,23 @@ export const CycleProvider = ({ children }) => {
     
     try {
       setLoading(true);
-      const [historyRes, riskRes, predictRes] = await Promise.all([
+      const [historyRes, riskRes, predictRes, profileRes] = await Promise.all([
         api.get('/cycle/history'),
         api.get('/cycle/pcod-risk'),
         api.get('/cycle/predict'),
+        api.get('/auth/profile'),
       ]);
       setHistory(historyRes.data || []);
-      setRiskData(riskRes.data || { riskScore: 0, level: 'normal', averageGap: 0 });
+      setRiskData(riskRes.data   || { riskScore: 0, level: 'normal', averageGap: 0 });
       setPrediction(predictRes.data || { predictedDate: null, ovulationDate: null });
+
+      // Keep localStorage in sync and expose profile via context
+      if (profileRes.data) {
+        const cached = JSON.parse(localStorage.getItem('user') || '{}');
+        const merged = { ...cached, ...profileRes.data };
+        localStorage.setItem('user', JSON.stringify(merged));
+        setUserProfile(profileRes.data);
+      }
     } catch (err) {
       console.error('CycleContext: Error fetching data', err);
     } finally {
@@ -43,7 +53,7 @@ export const CycleProvider = ({ children }) => {
   }, [refreshData]);
 
   return (
-    <CycleContext.Provider value={{ history, riskData, prediction, loading, refreshData }}>
+    <CycleContext.Provider value={{ history, userProfile, riskData, prediction, loading, refreshData }}>
       {children}
     </CycleContext.Provider>
   );

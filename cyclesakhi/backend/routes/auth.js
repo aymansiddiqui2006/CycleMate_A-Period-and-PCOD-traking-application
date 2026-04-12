@@ -47,7 +47,8 @@ router.post('/register', async (req, res) => {
     res.json({ 
       accessToken, 
       refreshToken, 
-      user: { id: user.id, name: user.name, email: user.email, age: user.age } 
+      isNewUser: true,
+      user: { id: user.id, name: user.name, email: user.email, age: user.age, isOnboarded: false } 
     });
   } catch (err) {
     console.error(err.message);
@@ -73,7 +74,7 @@ router.post('/login', async (req, res) => {
     res.json({ 
       accessToken, 
       refreshToken, 
-      user: { id: user.id, name: user.name, email: user.email, age: user.age } 
+      user: { id: user.id, name: user.name, email: user.email, age: user.age, isOnboarded: user.isOnboarded } 
     });
   } catch (err) {
     console.error(err.message);

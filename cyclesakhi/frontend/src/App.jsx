@@ -6,6 +6,7 @@ import { CycleProvider } from './context/CycleContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
+import Onboarding from './pages/Onboarding';
 import Doctors from './pages/Doctors';
 import Orders from './pages/Orders';
 import Report from './pages/Report';
@@ -14,8 +15,15 @@ import ChatBot from './components/ChatBot';
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('accessToken');
-  const user = localStorage.getItem('user');
+  const user  = localStorage.getItem('user');
   return token && user ? children : <Navigate to="/auth" replace />;
+};
+
+// Only blocks unauthenticated users. Onboarded users CAN revisit to edit.
+const OnboardingRoute = ({ children }) => {
+  const token = localStorage.getItem('accessToken');
+  if (!token) return <Navigate to="/auth" replace />;
+  return children;
 };
 
 const AppLayout = ({ children }) => (
@@ -49,7 +57,8 @@ function App() {
             }}
           />
           <Routes>
-            <Route path="/auth" element={<Auth />} />
+            <Route path="/auth"       element={<Auth />} />
+            <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
             <Route path="/dashboard" element={<PrivateRoute><AppLayout><Dashboard /></AppLayout></PrivateRoute>} />
             <Route path="/doctors"   element={<PrivateRoute><AppLayout><Doctors /></AppLayout></PrivateRoute>} />
             <Route path="/orders"    element={<PrivateRoute><AppLayout><Orders /></AppLayout></PrivateRoute>} />

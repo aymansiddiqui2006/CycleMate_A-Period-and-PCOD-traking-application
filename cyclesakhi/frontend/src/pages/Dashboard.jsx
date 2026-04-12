@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, AlertCircle, HeartPulse, Clock, Flame } from 'lucide-react';
+import { Download, AlertCircle, HeartPulse, Clock, Flame, Calendar, Activity, Target, Zap } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { useNavigate } from 'react-router-dom';
 import { useCycle } from '../context/CycleContext';
@@ -10,6 +10,19 @@ import Graph from '../components/Graph';
 import Onboarding from '../components/Onboarding';
 import NotificationCenter from '../components/NotificationCenter';
 import { DashboardSkeleton } from '../components/Skeleton';
+
+// ── Friendly label maps (match Onboarding.jsx ids) ─────────────────
+const SYMPTOM_LABELS = {
+  cramps: '🤕 Cramps', bloating: '🫧 Bloating', mood_swings: '😢 Mood Swings',
+  headaches: '🤯 Headaches', fatigue: '😴 Fatigue', acne: '🔴 Acne',
+  backpain: '🦴 Back Pain', nausea: '🤢 Nausea',
+};
+const GOAL_LABELS = {
+  track_cycle: '📅 Track Cycle', reduce_cramps: '💊 Reduce Cramps',
+  get_pregnant: '🤱 Get Pregnant', pcod_manage: '💜 Manage PCOD/PCOS',
+  mood_improve: '😊 Improve Mood', fitness: '🏃 Sync Fitness',
+  nutrition: '🥗 Better Nutrition', sleep: '🌙 Improve Sleep',
+};
 
 /* ── Animated counter ─────────────────────────────── */
 const AnimatedCounter = ({ value }) => {
@@ -51,7 +64,7 @@ const calcStreak = (data) => {
 
 const Dashboard = () => {
   const { t } = useLanguage();
-  const { history, riskData, loading, refreshData } = useCycle();
+  const { history, userProfile, riskData, loading, refreshData } = useCycle();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -200,13 +213,20 @@ const Dashboard = () => {
             className="lg:col-span-4 bg-white/70 backdrop-blur-xl border border-white/80 rounded-3xl p-7 shadow-[0_4px_20px_rgba(255,107,138,0.08)] flex flex-col gap-5"
           >
             {history.length === 0 ? (
-              /* Empty state */
-              <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-6">
-                <div className="text-6xl animate-bounce">🌸</div>
-                <h3 className="text-lg font-bold text-gray-700">{t('start_journey')}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">
-                  Log your first period on the Calendar above to see your health stats here.
-                </p>
+              /* Show onboarding defaults when no logged cycles yet */
+              <div className="flex flex-col gap-4">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t('cycle_stats')}</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-[#FF6B8A] to-purple-500">
+                    {userProfile?.cycleLength || 28}
+                  </span>
+                  <span className="text-base text-gray-400 font-medium">days (your setting)</span>
+                </div>
+                <div className="bg-pink-50 rounded-2xl p-4 border border-pink-100">
+                  <p className="text-xs text-gray-500 font-medium">Period Duration</p>
+                  <p className="text-2xl font-bold text-[#FF6B8A]">{userProfile?.periodDuration || 5} <span className="text-sm font-medium text-gray-400">days</span></p>
+                </div>
+                <p className="text-xs text-gray-400 text-center">Log your first period on the Calendar to start tracking real stats.</p>
               </div>
             ) : (
               <>
@@ -255,6 +275,101 @@ const Dashboard = () => {
               )}
             </div>
           </motion.div>
+
+          {/* ── Health Profile card (from onboarding) ── */}
+          {userProfile?.isOnboarded && (
+            <motion.div
+              variants={itemVars}
+              whileHover={{ y: -4 }}
+              className="lg:col-span-12 bg-white/70 backdrop-blur-xl border border-white/80 rounded-3xl p-7 shadow-[0_4px_20px_rgba(255,107,138,0.08)]"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold text-gray-800">Your Health Profile</h3>
+                <button
+                  onClick={() => navigate('/onboarding')}
+                  className="text-xs text-[#FF6B8A] font-semibold hover:underline"
+                >
+                  Edit answers →
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                {/* Cycle Length */}
+                <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl p-4 border border-pink-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-pink-100 flex items-center justify-center">
+                      <Calendar size={16} className="text-[#FF6B8A]" />
+                    </div>
+                    <p className="text-xs font-semibold text-gray-500">Cycle Length</p>
+                  </div>
+                  <p className="text-3xl font-black text-[#FF6B8A]">{userProfile.cycleLength}<span className="text-sm font-medium text-gray-400 ml-1">days</span></p>
+                </div>
+
+                {/* Period Duration */}
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-4 border border-purple-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center">
+                      <Activity size={16} className="text-purple-500" />
+                    </div>
+                    <p className="text-xs font-semibold text-gray-500">Period Duration</p>
+                  </div>
+                  <p className="text-3xl font-black text-purple-500">{userProfile.periodDuration}<span className="text-sm font-medium text-gray-400 ml-1">days</span></p>
+                </div>
+
+                {/* Symptoms count */}
+                <div className="bg-gradient-to-br from-orange-50 to-pink-50 rounded-2xl p-4 border border-orange-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center">
+                      <Zap size={16} className="text-orange-400" />
+                    </div>
+                    <p className="text-xs font-semibold text-gray-500">Tracked Symptoms</p>
+                  </div>
+                  <p className="text-3xl font-black text-orange-400">{userProfile.symptoms?.length || 0}<span className="text-sm font-medium text-gray-400 ml-1">types</span></p>
+                </div>
+
+                {/* Goals count */}
+                <div className="bg-gradient-to-br from-green-50 to-teal-50 rounded-2xl p-4 border border-green-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-green-100 flex items-center justify-center">
+                      <Target size={16} className="text-green-500" />
+                    </div>
+                    <p className="text-xs font-semibold text-gray-500">Health Goals</p>
+                  </div>
+                  <p className="text-3xl font-black text-green-500">{userProfile.healthGoals?.length || 0}<span className="text-sm font-medium text-gray-400 ml-1">set</span></p>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-5">
+                {/* Symptoms */}
+                {userProfile.symptoms?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Symptoms You Track</p>
+                    <div className="flex flex-wrap gap-2">
+                      {userProfile.symptoms.map(id => (
+                        <span key={id} className="px-3 py-1.5 rounded-full text-sm font-medium bg-pink-50 text-pink-600 border border-pink-100">
+                          {SYMPTOM_LABELS[id] || id}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Goals */}
+                {userProfile.healthGoals?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Your Health Goals</p>
+                    <div className="flex flex-wrap gap-2">
+                      {userProfile.healthGoals.map(id => (
+                        <span key={id} className="px-3 py-1.5 rounded-full text-sm font-medium bg-purple-50 text-purple-600 border border-purple-100">
+                          {GOAL_LABELS[id] || id}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
 
         </div>
       </motion.div>

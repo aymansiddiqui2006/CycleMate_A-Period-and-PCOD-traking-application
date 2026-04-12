@@ -1,5 +1,6 @@
 import express from 'express';
 import CycleData from '../models/CycleData.js';
+import User from '../models/User.js';
 import authMiddleware from '../middleware/auth.js';
 
 const router = express.Router();
@@ -142,10 +143,34 @@ router.get('/predict', authMiddleware, async (req, res) => {
       .limit(6);
 
     if (history.length < 3) {
+      // Fall back to the user's onboarding cycle length if available
+      const user = await User.findById(req.user.id).select('cycleLength lastPeriodDate');
+      const fallbackLength = user?.cycleLength || 28;
+      const baseDate = user?.lastPeriodDate
+        ? new Date(user.lastPeriodDate)
+        : history.length >= 1
+          ? parseDateAsLocal(toDateString(history[0].startDate))
+          : null;
+
+      if (!baseDate || isNaN(baseDate.getTime())) {
+        return res.json({
+          message:       'Not enough data to predict accurately',
+          predictedDate: null,
+          ovulationDate: null,
+        });
+      }
+
+      const predictedDate = new Date(baseDate);
+      predictedDate.setDate(baseDate.getDate() + fallbackLength);
+      const ovulationDate = new Date(predictedDate);
+      ovulationDate.setDate(predictedDate.getDate() - 14);
+
       return res.json({
-        message:       'Not enough data to predict accurately',
-        predictedDate: null,
-        ovulationDate: null,
+        predictedDate,
+        predictedCycleLength: fallbackLength,
+        ovulationDate,
+        confidence: 'Low',
+        message: 'Based on your onboarding settings',
       });
     }
 

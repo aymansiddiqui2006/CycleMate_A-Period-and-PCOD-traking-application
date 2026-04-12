@@ -30,6 +30,31 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  // ── Onboarding fields ──────────────────────────────
+  lastPeriodDate: {
+    type: Date,
+    default: null,
+  },
+  cycleLength: {
+    type: Number,
+    default: 28,
+  },
+  periodDuration: {
+    type: Number,
+    default: 5,
+  },
+  symptoms: {
+    type: [String],
+    default: [],
+  },
+  healthGoals: {
+    type: [String],
+    default: [],
+  },
+  isOnboarded: {
+    type: Boolean,
+    default: false,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
